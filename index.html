@@ -542,23 +542,6 @@
             <div class="feed" id="posts-feed">
                 <!-- Current post will be shown here -->
             </div>
-            <div class="post-navigation">
-                <button id="prev-post" class="nav-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="19" y1="12" x2="5" y2="12"></line>
-                        <polyline points="12 19 5 12 12 5"></polyline>
-                    </svg>
-                    Previous
-                </button>
-                <span class="post-counter" id="post-counter">0 of 0</span>
-                <button id="next-post" class="nav-btn">
-                    Next
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                </button>
-            </div>
         </div>
     </div>
 
@@ -586,13 +569,13 @@
         const removeImageBtn = document.getElementById('remove-image');
         const submitPostBtn = document.getElementById('submit-post');
         const postsFeed = document.getElementById('posts-feed');
-        const prevPostBtn = document.getElementById('prev-post');
-        const nextPostBtn = document.getElementById('next-post');
-        const postCounter = document.getElementById('post-counter');
         
         // Post pagination state
         let currentPostIndex = 0;
         let sortedPosts = [];
+        
+        // End of posts flag
+        let isLastPost = false;
         
         // Auth Event Listeners
         document.getElementById('login-btn').addEventListener('click', login);
@@ -821,8 +804,7 @@
                 showCurrentPost();
             } else {
                 postsFeed.innerHTML = '<div class="post-card"><div class="post-content"><p>No posts yet. Be the first to share something!</p></div></div>';
-                postCounter.textContent = '0 of 0';
-                updateNavButtons();
+                isLastPost = true;
             }
         }
         
@@ -836,31 +818,22 @@
             const postCard = createPostElement(post);
             postsFeed.appendChild(postCard);
             
-            // Update counter and navigation buttons
-            postCounter.textContent = `${currentPostIndex + 1} of ${sortedPosts.length}`;
-            updateNavButtons();
+            // Update last post flag
+            isLastPost = currentPostIndex >= sortedPosts.length - 1;
         }
         
-        // Update navigation buttons state
-        function updateNavButtons() {
-            prevPostBtn.disabled = currentPostIndex <= 0;
-            nextPostBtn.disabled = currentPostIndex >= sortedPosts.length - 1;
-        }
-        
-        // Navigation button event listeners
-        prevPostBtn.addEventListener('click', () => {
-            if (currentPostIndex > 0) {
-                currentPostIndex--;
-                showCurrentPost();
-            }
-        });
-        
-        nextPostBtn.addEventListener('click', () => {
+        // Go to next post
+        function goToNextPost() {
             if (currentPostIndex < sortedPosts.length - 1) {
                 currentPostIndex++;
                 showCurrentPost();
+                return true;
+            } else {
+                // Show end of feed message or loop back to first post
+                isLastPost = true;
+                return false;
             }
-        });
+        }
         
         // Create Post Element
         function createPostElement(post) {
@@ -942,19 +915,39 @@
                 const diffX = currentX - startX;
                 
                 this.style.transition = 'transform 0.3s ease';
-                this.style.transform = 'translateX(0)';
                 
-                // Reset overlays
-                this.querySelector('.like-overlay').style.opacity = 0;
-                this.querySelector('.dislike-overlay').style.opacity = 0;
-                
-                // Register like or dislike if swipe is significant
-                if (diffX > 80) {
-                    // Like
-                    likePost(post.id);
-                } else if (diffX < -80) {
-                    // Dislike
-                    dislikePost(post.id);
+                // Handle significant swipe
+                if (Math.abs(diffX) > 80) {
+                    // Animate the swipe out
+                    const direction = diffX > 0 ? 1 : -1;
+                    this.style.transform = `translateX(${direction * window.innerWidth}px)`;
+                    
+                    // Reset overlays with a delay
+                    setTimeout(() => {
+                        this.querySelector('.like-overlay').style.opacity = 0;
+                        this.querySelector('.dislike-overlay').style.opacity = 0;
+                        
+                        // Register like or dislike
+                        if (diffX > 80) {
+                            // Like
+                            likePost(post.id);
+                        } else if (diffX < -80) {
+                            // Dislike
+                            dislikePost(post.id);
+                        }
+                        
+                        // Go to next post after animation
+                        setTimeout(() => {
+                            goToNextPost();
+                        }, 50);
+                    }, 200);
+                } else {
+                    // Reset if not a significant swipe
+                    this.style.transform = 'translateX(0)';
+                    
+                    // Reset overlays
+                    this.querySelector('.like-overlay').style.opacity = 0;
+                    this.querySelector('.dislike-overlay').style.opacity = 0;
                 }
             });
             
@@ -987,21 +980,40 @@
                     document.removeEventListener('mouseup', handleMouseUp);
                     
                     const diffX = currentX - startX;
-                    
                     this.style.transition = 'transform 0.3s ease';
-                    this.style.transform = 'translateX(0)';
                     
-                    // Reset overlays
-                    this.querySelector('.like-overlay').style.opacity = 0;
-                    this.querySelector('.dislike-overlay').style.opacity = 0;
-                    
-                    // Register like or dislike if swipe is significant
-                    if (diffX > 80) {
-                        // Like
-                        likePost(post.id);
-                    } else if (diffX < -80) {
-                        // Dislike
-                        dislikePost(post.id);
+                    // Handle significant swipe
+                    if (Math.abs(diffX) > 80) {
+                        // Animate the swipe out
+                        const direction = diffX > 0 ? 1 : -1;
+                        this.style.transform = `translateX(${direction * window.innerWidth}px)`;
+                        
+                        // Reset overlays with a delay
+                        setTimeout(() => {
+                            this.querySelector('.like-overlay').style.opacity = 0;
+                            this.querySelector('.dislike-overlay').style.opacity = 0;
+                            
+                            // Register like or dislike
+                            if (diffX > 80) {
+                                // Like
+                                likePost(post.id);
+                            } else if (diffX < -80) {
+                                // Dislike
+                                dislikePost(post.id);
+                            }
+                            
+                            // Go to next post after animation
+                            setTimeout(() => {
+                                goToNextPost();
+                            }, 50);
+                        }, 200);
+                    } else {
+                        // Reset if not a significant swipe
+                        this.style.transform = 'translateX(0)';
+                        
+                        // Reset overlays
+                        this.querySelector('.like-overlay').style.opacity = 0;
+                        this.querySelector('.dislike-overlay').style.opacity = 0;
                     }
                 };
                 
@@ -1019,15 +1031,12 @@
                 posts[postIndex].likes++;
                 localStorage.setItem('posts', JSON.stringify(posts));
                 
-                // Re-sort posts and update current index
-                const currentPostId = sortedPosts[currentPostIndex].id;
+                // Re-sort posts after the swipe animation completes
                 sortedPosts = [...posts].sort((a, b) => {
                     const scoreA = a.likes - a.dislikes;
                     const scoreB = b.likes - b.dislikes;
                     return scoreB - scoreA;
                 });
-                currentPostIndex = sortedPosts.findIndex(p => p.id === currentPostId);
-                postCounter.textContent = `${currentPostIndex + 1} of ${sortedPosts.length}`;
             }
         }
         
@@ -1038,15 +1047,12 @@
                 posts[postIndex].dislikes++;
                 localStorage.setItem('posts', JSON.stringify(posts));
                 
-                // Re-sort posts and update current index
-                const currentPostId = sortedPosts[currentPostIndex].id;
+                // Re-sort posts after the swipe animation completes
                 sortedPosts = [...posts].sort((a, b) => {
                     const scoreA = a.likes - a.dislikes;
                     const scoreB = b.likes - b.dislikes;
                     return scoreB - scoreA;
                 });
-                currentPostIndex = sortedPosts.findIndex(p => p.id === currentPostId);
-                postCounter.textContent = `${currentPostIndex + 1} of ${sortedPosts.length}`;
             }
         }
         
