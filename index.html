@@ -540,7 +540,24 @@
 
             <!-- Posts Feed -->
             <div class="feed" id="posts-feed">
-                <!-- Posts will be added dynamically here -->
+                <!-- Current post will be shown here -->
+            </div>
+            <div class="post-navigation">
+                <button id="prev-post" class="nav-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Previous
+                </button>
+                <span class="post-counter" id="post-counter">0 of 0</span>
+                <button id="next-post" class="nav-btn">
+                    Next
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </button>
             </div>
         </div>
     </div>
@@ -569,6 +586,13 @@
         const removeImageBtn = document.getElementById('remove-image');
         const submitPostBtn = document.getElementById('submit-post');
         const postsFeed = document.getElementById('posts-feed');
+        const prevPostBtn = document.getElementById('prev-post');
+        const nextPostBtn = document.getElementById('next-post');
+        const postCounter = document.getElementById('post-counter');
+        
+        // Post pagination state
+        let currentPostIndex = 0;
+        let sortedPosts = [];
         
         // Auth Event Listeners
         document.getElementById('login-btn').addEventListener('click', login);
@@ -716,8 +740,10 @@
             postTextarea.value = '';
             removeImage();
             
-            // Reload posts
+            // Reload posts and show the new post
             loadPosts();
+            currentPostIndex = 0; // New post will be first if it has highest score or total posts was 0
+            showCurrentPost();
         }
         
         // Render Comments Function
@@ -782,20 +808,59 @@
         
         // Load Posts
         function loadPosts() {
-            postsFeed.innerHTML = '';
-            
             // Sort posts by likes minus dislikes (highest score first)
-            const sortedPosts = [...posts].sort((a, b) => {
+            sortedPosts = [...posts].sort((a, b) => {
                 const scoreA = a.likes - a.dislikes;
                 const scoreB = b.likes - b.dislikes;
                 return scoreB - scoreA;
             });
             
-            sortedPosts.forEach(post => {
-                const postCard = createPostElement(post);
-                postsFeed.appendChild(postCard);
-            });
+            // Show first post or no posts message
+            if (sortedPosts.length > 0) {
+                currentPostIndex = 0;
+                showCurrentPost();
+            } else {
+                postsFeed.innerHTML = '<div class="post-card"><div class="post-content"><p>No posts yet. Be the first to share something!</p></div></div>';
+                postCounter.textContent = '0 of 0';
+                updateNavButtons();
+            }
         }
+        
+        // Show current post
+        function showCurrentPost() {
+            if (sortedPosts.length === 0) return;
+            
+            const post = sortedPosts[currentPostIndex];
+            postsFeed.innerHTML = '';
+            
+            const postCard = createPostElement(post);
+            postsFeed.appendChild(postCard);
+            
+            // Update counter and navigation buttons
+            postCounter.textContent = `${currentPostIndex + 1} of ${sortedPosts.length}`;
+            updateNavButtons();
+        }
+        
+        // Update navigation buttons state
+        function updateNavButtons() {
+            prevPostBtn.disabled = currentPostIndex <= 0;
+            nextPostBtn.disabled = currentPostIndex >= sortedPosts.length - 1;
+        }
+        
+        // Navigation button event listeners
+        prevPostBtn.addEventListener('click', () => {
+            if (currentPostIndex > 0) {
+                currentPostIndex--;
+                showCurrentPost();
+            }
+        });
+        
+        nextPostBtn.addEventListener('click', () => {
+            if (currentPostIndex < sortedPosts.length - 1) {
+                currentPostIndex++;
+                showCurrentPost();
+            }
+        });
         
         // Create Post Element
         function createPostElement(post) {
@@ -953,7 +1018,16 @@
             if (postIndex !== -1) {
                 posts[postIndex].likes++;
                 localStorage.setItem('posts', JSON.stringify(posts));
-                loadPosts();
+                
+                // Re-sort posts and update current index
+                const currentPostId = sortedPosts[currentPostIndex].id;
+                sortedPosts = [...posts].sort((a, b) => {
+                    const scoreA = a.likes - a.dislikes;
+                    const scoreB = b.likes - b.dislikes;
+                    return scoreB - scoreA;
+                });
+                currentPostIndex = sortedPosts.findIndex(p => p.id === currentPostId);
+                postCounter.textContent = `${currentPostIndex + 1} of ${sortedPosts.length}`;
             }
         }
         
@@ -963,7 +1037,16 @@
             if (postIndex !== -1) {
                 posts[postIndex].dislikes++;
                 localStorage.setItem('posts', JSON.stringify(posts));
-                loadPosts();
+                
+                // Re-sort posts and update current index
+                const currentPostId = sortedPosts[currentPostIndex].id;
+                sortedPosts = [...posts].sort((a, b) => {
+                    const scoreA = a.likes - a.dislikes;
+                    const scoreB = b.likes - b.dislikes;
+                    return scoreB - scoreA;
+                });
+                currentPostIndex = sortedPosts.findIndex(p => p.id === currentPostId);
+                postCounter.textContent = `${currentPostIndex + 1} of ${sortedPosts.length}`;
             }
         }
         
@@ -1021,6 +1104,15 @@
             
             posts[postIndex].comments.push(newComment);
             localStorage.setItem('posts', JSON.stringify(posts));
+            
+            // Re-sort posts and update current index
+            const currentPostId = sortedPosts[currentPostIndex].id;
+            sortedPosts = [...posts].sort((a, b) => {
+                const scoreA = a.likes - a.dislikes;
+                const scoreB = b.likes - b.dislikes;
+                return scoreB - scoreA;
+            });
+            currentPostIndex = sortedPosts.findIndex(p => p.id === currentPostId);
             
             // Update only the comments section of this post
             const commentsContainer = document.querySelector(`#comments-${postId} .comments-container`);
