@@ -887,9 +887,23 @@
             // Add swipe functionality
             let startX = 0;
             let currentX = 0;
+            let hasMoved = false;
+            const moveThreshold = 20; // Minimum pixels to move before considering it a swipe
             
+            // Touch events for mobile
             postCard.addEventListener('touchstart', function(e) {
+                // Ignore if interacting with interactive elements
+                if (e.target.closest('.post-action-btn') || 
+                    e.target.closest('input') || 
+                    e.target.closest('button') ||
+                    e.target.tagName === 'INPUT' ||
+                    e.target.tagName === 'BUTTON') {
+                    return;
+                }
+                
                 startX = e.touches[0].clientX;
+                currentX = startX;
+                hasMoved = false;
                 this.style.transition = 'none';
             });
             
@@ -897,28 +911,32 @@
                 currentX = e.touches[0].clientX;
                 const diffX = currentX - startX;
                 
-                // Limit the swipe distance
-                if (Math.abs(diffX) > 150) return;
-                
-                this.style.transform = `translateX(${diffX}px)`;
-                
-                // Show overlay based on swipe direction
-                if (diffX > 0) {
-                    this.querySelector('.like-overlay').style.opacity = diffX / 150;
-                    this.querySelector('.dislike-overlay').style.opacity = 0;
-                } else if (diffX < 0) {
-                    this.querySelector('.dislike-overlay').style.opacity = Math.abs(diffX) / 150;
-                    this.querySelector('.like-overlay').style.opacity = 0;
+                // Only start transforming if we've moved past the threshold
+                if (Math.abs(diffX) > moveThreshold) {
+                    hasMoved = true;
+                    
+                    // Limit the swipe distance
+                    if (Math.abs(diffX) > 150) return;
+                    
+                    this.style.transform = `translateX(${diffX}px)`;
+                    
+                    // Show overlay based on swipe direction
+                    if (diffX > 0) {
+                        this.querySelector('.like-overlay').style.opacity = diffX / 150;
+                        this.querySelector('.dislike-overlay').style.opacity = 0;
+                    } else if (diffX < 0) {
+                        this.querySelector('.dislike-overlay').style.opacity = Math.abs(diffX) / 150;
+                        this.querySelector('.like-overlay').style.opacity = 0;
+                    }
                 }
             });
             
             postCard.addEventListener('touchend', function(e) {
                 const diffX = currentX - startX;
-                
                 this.style.transition = 'transform 0.3s ease';
                 
-                // Handle significant swipe
-                if (Math.abs(diffX) > 80) {
+                // Only process as a swipe if the move threshold was exceeded
+                if (hasMoved && Math.abs(diffX) > 80) {
                     // Animate the swipe out
                     const direction = diffX > 0 ? 1 : -1;
                     this.style.transform = `translateX(${direction * window.innerWidth}px)`;
@@ -954,25 +972,43 @@
             
             // For desktop testing - click events instead of swipe
             postCard.addEventListener('mousedown', function(e) {
+                // Ignore clicks on buttons, inputs, etc.
+                if (e.target.closest('.post-action-btn') || 
+                    e.target.closest('input') || 
+                    e.target.closest('button') ||
+                    e.target.tagName === 'INPUT' ||
+                    e.target.tagName === 'BUTTON') {
+                    return;
+                }
+                
+                // Track if mouse has moved enough to be considered a swipe
+                hasMoved = false;
+                
                 startX = e.clientX;
+                currentX = startX;
                 this.style.transition = 'none';
                 
                 const handleMouseMove = (e) => {
                     currentX = e.clientX;
                     const diffX = currentX - startX;
                     
-                    // Limit the swipe distance
-                    if (Math.abs(diffX) > 150) return;
-                    
-                    this.style.transform = `translateX(${diffX}px)`;
-                    
-                    // Show overlay based on swipe direction
-                    if (diffX > 0) {
-                        this.querySelector('.like-overlay').style.opacity = diffX / 150;
-                        this.querySelector('.dislike-overlay').style.opacity = 0;
-                    } else if (diffX < 0) {
-                        this.querySelector('.dislike-overlay').style.opacity = Math.abs(diffX) / 150;
-                        this.querySelector('.like-overlay').style.opacity = 0;
+                    // Only start transforming if we've moved past the threshold
+                    if (Math.abs(diffX) > moveThreshold) {
+                        hasMoved = true;
+                        
+                        // Limit the swipe distance
+                        if (Math.abs(diffX) > 150) return;
+                        
+                        this.style.transform = `translateX(${diffX}px)`;
+                        
+                        // Show overlay based on swipe direction
+                        if (diffX > 0) {
+                            this.querySelector('.like-overlay').style.opacity = diffX / 150;
+                            this.querySelector('.dislike-overlay').style.opacity = 0;
+                        } else if (diffX < 0) {
+                            this.querySelector('.dislike-overlay').style.opacity = Math.abs(diffX) / 150;
+                            this.querySelector('.like-overlay').style.opacity = 0;
+                        }
                     }
                 };
                 
@@ -983,8 +1019,8 @@
                     const diffX = currentX - startX;
                     this.style.transition = 'transform 0.3s ease';
                     
-                    // Handle significant swipe
-                    if (Math.abs(diffX) > 80) {
+                    // Only process as a swipe if the move threshold was exceeded
+                    if (hasMoved && Math.abs(diffX) > 80) {
                         // Animate the swipe out
                         const direction = diffX > 0 ? 1 : -1;
                         this.style.transform = `translateX(${direction * window.innerWidth}px)`;
