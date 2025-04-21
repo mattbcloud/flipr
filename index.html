@@ -829,9 +829,10 @@
                 showCurrentPost();
                 return true;
             } else {
-                // Show end of feed message or loop back to first post
-                isLastPost = true;
-                return false;
+                // Loop back to first post
+                currentPostIndex = 0;
+                showCurrentPost();
+                return true;
             }
         }
         
