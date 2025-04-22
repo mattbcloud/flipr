@@ -694,39 +694,79 @@
             imagePreview.style.display = 'none';
         }
         
-        // Create New Post
+        // Create New Post - FIXED FUNCTION
         function createPost() {
-            const text = postTextarea.value.trim();
-            const imageData = previewImg.src || null;
-            
-            if (!text && !imageData) {
-                alert('Please add some text or an image to your post');
-                return;
+            try {
+                // Check if user is logged in
+                if (!currentUser) {
+                    alert('You must be logged in to create a post');
+                    return;
+                }
+                
+                const text = postTextarea.value.trim();
+                const imageData = previewImg.src || null;
+                
+                // Check if user has entered any content
+                if (!text && (!imageData || imageData === '')) {
+                    alert('Please add some text or an image to your post');
+                    return;
+                }
+                
+                // Create the post object
+                const newPost = {
+                    id: Date.now().toString(),
+                    author: currentUser.username,
+                    authorId: currentUser.id,
+                    text,
+                    image: imageData,
+                    timestamp: new Date().toISOString(),
+                    likes: 0,
+                    dislikes: 0,
+                    comments: []
+                };
+                
+                // Add the post to local storage
+                try {
+                    posts.unshift(newPost); // Add to beginning of array
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                } catch (storageError) {
+                    console.error('Failed to save post to localStorage:', storageError);
+                    alert('Could not save your post. Storage might be full, especially if you included a large image.');
+                    posts.shift(); // Remove the post we just added since we couldn't save it
+                    return;
+                }
+                
+                // Reset form
+                postTextarea.value = '';
+                removeImage();
+                
+                // Update sortedPosts to include the new post
+                sortedPosts = [...posts].sort((a, b) => {
+                    const scoreA = a.likes - a.dislikes;
+                    const scoreB = b.likes - b.dislikes;
+                    if (scoreB !== scoreA) {
+                        return scoreB - scoreA;
+                    }
+                    // If scores are equal, sort by timestamp (newest first)
+                    return new Date(b.timestamp) - new Date(a.timestamp);
+                });
+                
+                // Find the new post in the sorted array
+                const newPostIndex = sortedPosts.findIndex(post => post.id === newPost.id);
+                if (newPostIndex !== -1) {
+                    currentPostIndex = newPostIndex;
+                } else {
+                    // If for some reason it's not found, show the first post
+                    currentPostIndex = 0;
+                }
+                
+                showCurrentPost();
+                
+                console.log('Post created successfully:', newPost.id);
+            } catch (error) {
+                console.error('Error creating post:', error);
+                alert('An error occurred while creating your post. Please try again.');
             }
-            
-            const newPost = {
-                id: Date.now().toString(),
-                author: currentUser.username,
-                authorId: currentUser.id,
-                text,
-                image: imageData,
-                timestamp: new Date().toISOString(),
-                likes: 0,
-                dislikes: 0,
-                comments: []
-            };
-            
-            posts.unshift(newPost);
-            localStorage.setItem('posts', JSON.stringify(posts));
-            
-            // Reset form
-            postTextarea.value = '';
-            removeImage();
-            
-            // Reload posts and show the new post
-            loadPosts();
-            currentPostIndex = 0; // New post will be first if it has highest score or total posts was 0
-            showCurrentPost();
         }
         
         // Render Comments Function
@@ -789,13 +829,17 @@
             }).join('');
         }
         
-        // Load Posts
+        // Load Posts - UPDATED FUNCTION
         function loadPosts() {
             // Sort posts by likes minus dislikes (highest score first)
+            // If scores are equal, sort by timestamp (newest first)
             sortedPosts = [...posts].sort((a, b) => {
                 const scoreA = a.likes - a.dislikes;
                 const scoreB = b.likes - b.dislikes;
-                return scoreB - scoreA;
+                if (scoreB !== scoreA) {
+                    return scoreB - scoreA;
+                }
+                return new Date(b.timestamp) - new Date(a.timestamp);
             });
             
             // Show first post or no posts message
@@ -1072,7 +1116,11 @@
                 sortedPosts = [...posts].sort((a, b) => {
                     const scoreA = a.likes - a.dislikes;
                     const scoreB = b.likes - b.dislikes;
-                    return scoreB - scoreA;
+                    if (scoreB !== scoreA) {
+                        return scoreB - scoreA;
+                    }
+                    // If scores are equal, sort by timestamp (newest first)
+                    return new Date(b.timestamp) - new Date(a.timestamp);
                 });
             }
         }
@@ -1088,7 +1136,11 @@
                 sortedPosts = [...posts].sort((a, b) => {
                     const scoreA = a.likes - a.dislikes;
                     const scoreB = b.likes - b.dislikes;
-                    return scoreB - scoreA;
+                    if (scoreB !== scoreA) {
+                        return scoreB - scoreA;
+                    }
+                    // If scores are equal, sort by timestamp (newest first)
+                    return new Date(b.timestamp) - new Date(a.timestamp);
                 });
             }
         }
@@ -1125,7 +1177,7 @@
             return seconds < 10 ? 'just now' : `${seconds} seconds ago`;
         }
         
-                // Add comment to post
+        // Add comment to post
         function addComment(postId, commentText) {
             if (!commentText.trim()) return;
             
@@ -1153,7 +1205,10 @@
             sortedPosts = [...posts].sort((a, b) => {
                 const scoreA = a.likes - a.dislikes;
                 const scoreB = b.likes - b.dislikes;
-                return scoreB - scoreA;
+                if (scoreB !== scoreA) {
+                    return scoreB - scoreA;
+                }
+                return new Date(b.timestamp) - new Date(a.timestamp);
             });
             currentPostIndex = sortedPosts.findIndex(p => p.id === currentPostId);
             
