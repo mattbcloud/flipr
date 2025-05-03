@@ -103,72 +103,31 @@
             align-items: center;
         }
 
-        .media-upload {
+        .image-upload {
             display: flex;
             align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
+            gap: 0.5rem;
             color: var(--secondary-color);
             cursor: pointer;
-            background-color: #222;
-            border-radius: 50%;
-            transition: all 0.2s;
         }
 
-        .media-upload:hover {
-            background-color: #333;
-            transform: scale(1.05);
-        }
-
-        .media-upload input {
+        .image-upload input {
             display: none;
         }
 
-        .media-preview {
+        .image-preview {
             margin-top: 1rem;
             display: none;
             position: relative;
         }
 
-        .media-preview img {
+        .image-preview img {
             max-width: 100%;
             max-height: 200px;
             border-radius: 4px;
         }
-        
-        .media-preview video {
-            max-width: 100%;
-            max-height: 300px;
-            border-radius: 4px;
-        }
-        
-        .media-type-selector {
-            display: flex;
-            gap: 0.5rem;
-            margin-right: 0.5rem;
-        }
-        
-        .media-type-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #222;
-            color: var(--secondary-color);
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .media-type-btn.active {
-            background-color: var(--secondary-color);
-            color: white;
-        }
 
-        .media-preview button {
+        .image-preview button {
             position: absolute;
             top: 5px;
             right: 5px;
@@ -181,17 +140,6 @@
             justify-content: center;
             align-items: center;
             cursor: pointer;
-        }
-        
-        .video-duration-indicator {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background-color: rgba(0,0,0,0.7);
-            color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.8rem;
         }
 
         button.post-btn {
@@ -261,32 +209,10 @@
             color: var(--text-color);
         }
 
-        .post-image, .post-video {
+        .post-image {
             width: 100%;
             max-height: 400px;
             object-fit: cover;
-            border-radius: 4px;
-        }
-        
-        .post-video-container {
-            position: relative;
-            width: 100%;
-        }
-        
-        .video-controls {
-            position: absolute;
-            bottom: 10px;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        
-        .post-video-container:hover .video-controls {
-            opacity: 1;
         }
 
         .post-stats {
@@ -611,30 +537,20 @@
             <!-- Post Form -->
             <div class="post-form">
                 <textarea id="post-text" placeholder="What's on your mind?" rows="3"></textarea>
-                <div class="media-preview" id="media-preview">
-                    <img id="preview-img" src="" alt="" style="display: none;">
-                    <video id="preview-video" controls style="display: none;"></video>
-                    <div id="video-duration" class="video-duration-indicator" style="display: none;"></div>
-                    <button id="remove-media">×</button>
+                <div class="image-preview" id="image-preview">
+                    <img id="preview-img" src="" alt="">
+                    <button id="remove-image">×</button>
                 </div>
                 <div class="form-actions">
-                    <div class="media-type-selector">
-                        <label class="media-type-btn active" id="image-type-btn">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                <circle cx="8.5" cy="8.5" r="1.5"/>
-                                <polyline points="21 15 16 10 5 21"/>
-                            </svg>
-                            <input type="file" id="image-input" accept="image/*" style="display: none;">
-                        </label>
-                        <label class="media-type-btn" id="video-type-btn">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="23 7 16 12 23 17 23 7"/>
-                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                            </svg>
-                            <input type="file" id="video-input" accept="video/*" style="display: none;">
-                        </label>
-                    </div>
+                    <label class="image-upload">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <span>Add Image</span>
+                        <input type="file" id="image-input" accept="image/*">
+                    </label>
                     <button class="post-btn" id="submit-post">Post</button>
                 </div>
             </div>
@@ -673,14 +589,9 @@
         const logoutBtn = document.getElementById('logout-btn');
         const postTextarea = document.getElementById('post-text');
         const imageInput = document.getElementById('image-input');
-        const videoInput = document.getElementById('video-input');
-        const mediaPreview = document.getElementById('media-preview');
+        const imagePreview = document.getElementById('image-preview');
         const previewImg = document.getElementById('preview-img');
-        const previewVideo = document.getElementById('preview-video');
-        const videoDuration = document.getElementById('video-duration');
-        const removeMediaBtn = document.getElementById('remove-media');
-        const imageTypeBtn = document.getElementById('image-type-btn');
-        const videoTypeBtn = document.getElementById('video-type-btn');
+        const removeImageBtn = document.getElementById('remove-image');
         const submitPostBtn = document.getElementById('submit-post');
         const postsFeed = document.getElementById('posts-feed');
         
@@ -719,39 +630,9 @@
         
         logoutBtn.addEventListener('click', logout);
         
-        // Media Type Selection
-        imageTypeBtn.addEventListener('click', function(e) {
-            // Prevent the file input from triggering when we click the label
-            if (e.target.tagName !== 'INPUT') {
-                imageTypeBtn.classList.add('active');
-                videoTypeBtn.classList.remove('active');
-                
-                // Focus on image functionality
-                if (previewVideo.src) {
-                    // If there's already a video, remove it when switching to image
-                    removeMedia();
-                }
-            }
-        });
-        
-        videoTypeBtn.addEventListener('click', function(e) {
-            // Prevent the file input from triggering when we click the label
-            if (e.target.tagName !== 'INPUT') {
-                videoTypeBtn.classList.add('active');
-                imageTypeBtn.classList.remove('active');
-                
-                // Focus on video functionality
-                if (previewImg.src) {
-                    // If there's already an image, remove it when switching to video
-                    removeMedia();
-                }
-            }
-        });
-        
         // Post Creation Event Listeners
         imageInput.addEventListener('change', handleImageSelect);
-        videoInput.addEventListener('change', handleVideoSelect);
-        removeMediaBtn.addEventListener('click', removeMedia);
+        removeImageBtn.addEventListener('click', removeImage);
         submitPostBtn.addEventListener('click', function(e) {
             e.preventDefault(); // Prevent any form submission behavior
             createPost();
@@ -859,17 +740,11 @@
                     return;
                 }
                 
-                // Clear any previous video
-                previewVideo.src = '';
-                previewVideo.style.display = 'none';
-                videoDuration.style.display = 'none';
-                
                 const reader = new FileReader();
                 
                 reader.onload = function(event) {
                     previewImg.src = event.target.result;
-                    previewImg.style.display = 'block';
-                    mediaPreview.style.display = 'block';
+                    imagePreview.style.display = 'block';
                 };
                 
                 reader.onerror = function() {
@@ -881,80 +756,14 @@
             }
         }
         
-        // Handle Video Selection
-        function handleVideoSelect(e) {
-            const file = e.target.files[0];
-            if (file) {
-                // Validate file is a video
-                if (!file.type.startsWith('video/')) {
-                    alert('Please select a video file');
-                    return;
-                }
-                
-                // Size check
-                if (file.size > 50 * 1024 * 1024) { // 50MB limit
-                    alert('Video is too large. Please select a video smaller than 50MB.');
-                    return;
-                }
-                
-                // Clear any previous image
-                previewImg.src = '';
-                previewImg.style.display = 'none';
-                
-                const reader = new FileReader();
-                
-                reader.onload = function(event) {
-                    // Create a blob URL for the video
-                    const blob = new Blob([event.target.result], { type: file.type });
-                    const videoURL = URL.createObjectURL(blob);
-                    
-                    // Set video source
-                    previewVideo.src = videoURL;
-                    previewVideo.style.display = 'block';
-                    mediaPreview.style.display = 'block';
-                    
-                    // Check video duration when metadata is loaded
-                    previewVideo.onloadedmetadata = function() {
-                        // Check if video is within the 2-minute limit
-                        if (previewVideo.duration > 120) { // 120 seconds = 2 minutes
-                            alert('Video duration exceeds the 2-minute limit. Please select a shorter video.');
-                            removeMedia();
-                            return;
-                        }
-                        
-                        // Show video duration
-                        const minutes = Math.floor(previewVideo.duration / 60);
-                        const seconds = Math.floor(previewVideo.duration % 60);
-                        videoDuration.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-                        videoDuration.style.display = 'block';
-                    };
-                };
-                
-                reader.onerror = function() {
-                    alert('Error reading the video file');
-                    console.error('FileReader error', reader.error);
-                };
-                
-                reader.readAsArrayBuffer(file);
-            }
-        }
-        
-        // Remove Selected Media
-        function removeMedia() {
+        // Remove Selected Image
+        function removeImage() {
             imageInput.value = '';
-            videoInput.value = '';
-            
-            // Clear image
             previewImg.src = '';
-            previewImg.style.display = 'none';
+            imagePreview.style.display = 'none';
             
-            // Clear video
-            previewVideo.src = '';
-            previewVideo.style.display = 'none';
-            videoDuration.style.display = 'none';
-            
-            // Hide preview container
-            mediaPreview.style.display = 'none';
+            // Ensure the src attribute is completely removed, not just set to empty
+            previewImg.removeAttribute('src');
         }
         
         // Create New Post
@@ -967,31 +776,23 @@
                 }
                 
                 const text = postTextarea.value.trim();
-                // Check for image or video content
-                const imageData = (previewImg.style.display !== 'none' && previewImg.src && previewImg.src.trim() !== '' && previewImg.src.length > 0) ? previewImg.src : null;
-                const videoData = (previewVideo.style.display !== 'none' && previewVideo.src && previewVideo.src.trim() !== '') ? previewVideo.src : null;
+                // Only use image data if it actually exists and isn't empty
+                const imageData = (previewImg.src && previewImg.src.trim() !== '' && previewImg.src.length > 0) ? previewImg.src : null;
                 
-                if (!text && !imageData && !videoData) {
-                    alert('Please add some text, an image, or a video to your post');
+                if (!text && !imageData) {
+                    alert('Please add some text or an image to your post');
                     return;
                 }
                 
                 console.log('Creating new post with text:', text.substring(0, 20) + '...');
-                console.log('Media present:', imageData ? 'Image' : (videoData ? 'Video' : 'None'));
-                
-                let videoDurationValue = null;
-                if (videoData && previewVideo.duration) {
-                    videoDurationValue = previewVideo.duration;
-                }
+                console.log('Image data present:', imageData ? 'Yes' : 'No');
                 
                 const newPost = {
                     id: Date.now().toString(),
                     author: currentUser.username,
                     authorId: currentUser.id,
                     text,
-                    image: imageData,
-                    video: videoData,
-                    videoDuration: videoDurationValue,
+                    image: imageData, // Will be null for text-only posts
                     timestamp: new Date().toISOString(),
                     likes: 0,
                     dislikes: 0,
@@ -1028,7 +829,7 @@
                 
                 // Reset form
                 postTextarea.value = '';
-                removeMedia();
+                removeImage();
                 console.log('Form reset completed');
                 
                 // Make sure the feed is visible
@@ -1281,16 +1082,6 @@
                 <div class="post-content">
                     <p>${post.text}</p>
                     ${post.image && post.image.trim() !== '' ? `<img class="post-image" src="${post.image}" alt="">` : ''}
-                    ${post.video ? `
-                    <div class="post-video-container">
-                        <video class="post-video" src="${post.video}" controls></video>
-                        ${post.videoDuration ? `
-                        <div class="video-duration-indicator">
-                            ${Math.floor(post.videoDuration / 60)}:${Math.floor(post.videoDuration % 60) < 10 ? '0' : ''}${Math.floor(post.videoDuration % 60)}
-                        </div>
-                        ` : ''}
-                    </div>
-                    ` : ''}
                 </div>
                 <div class="comments-section" id="comments-${post.id}">
                     <div class="comment-form">
