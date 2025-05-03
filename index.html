@@ -972,11 +972,6 @@
                 console.log('No posts available, showing empty state');
                 isLastPost = true;
             }
-            
-            // Update the post counters in the UI
-            updateCounters();
-            
-            console.log('*** FINISHED LOADING POSTS ***');
         }
         
         // Show current post
@@ -1026,9 +1021,6 @@
             
             // Update last post flag
             isLastPost = currentPostIndex >= sortedPosts.length - 1;
-            
-            // Update the position counter
-            updateCounters();
         }
         
         // We'll completely rewrite this function to solve the issue of posts not showing up in the feed
@@ -1374,7 +1366,7 @@
             return seconds < 10 ? 'just now' : `${seconds} seconds ago`;
         }
         
-                // Add comment to post
+        // Add comment to post
         function addComment(postId, commentText) {
             if (!commentText.trim()) return;
             
@@ -1510,93 +1502,7 @@
         // Initialize app
         checkAuth();
         
-        // Add debug controls to the header for improved testing
-        const headerEl = document.querySelector('header');
-        
-        // Refresh button
-        const refreshBtn = document.createElement('button');
-        refreshBtn.textContent = '🔄 Refresh';
-        refreshBtn.style.marginLeft = '10px';
-        refreshBtn.style.padding = '5px 10px';
-        refreshBtn.style.background = 'var(--primary-color)';
-        refreshBtn.style.border = 'none';
-        refreshBtn.style.borderRadius = '4px';
-        refreshBtn.style.color = '#000';
-        refreshBtn.style.cursor = 'pointer';
-        refreshBtn.addEventListener('click', function() {
-            console.log('Manual refresh triggered');
-            loadPosts();
-        });
-        
-        // Post count indicator
-        const postCountEl = document.createElement('span');
-        postCountEl.id = 'post-count';
-        postCountEl.style.marginLeft = '10px';
-        postCountEl.style.padding = '5px 10px';
-        postCountEl.style.background = '#222';
-        postCountEl.style.borderRadius = '4px';
-        postCountEl.style.color = 'var(--secondary-color)';
-        postCountEl.textContent = 'Posts: 0';
-        
-        // Add buttons to cycle through posts
-        const prevBtn = document.createElement('button');
-        prevBtn.textContent = '◀ Prev';
-        prevBtn.style.marginLeft = '10px';
-        prevBtn.style.padding = '5px 10px';
-        prevBtn.style.background = 'var(--secondary-color)';
-        prevBtn.style.border = 'none';
-        prevBtn.style.borderRadius = '4px 0 0 4px';
-        prevBtn.style.color = '#000';
-        prevBtn.style.cursor = 'pointer';
-        prevBtn.addEventListener('click', function() {
-            goToPrevPost();
-        });
-        
-        const nextBtn = document.createElement('button');
-        nextBtn.textContent = 'Next ▶';
-        nextBtn.style.padding = '5px 10px';
-        nextBtn.style.background = 'var(--secondary-color)';
-        nextBtn.style.border = 'none';
-        nextBtn.style.borderRadius = '0 4px 4px 0';
-        nextBtn.style.color = '#000';
-        nextBtn.style.cursor = 'pointer';
-        nextBtn.addEventListener('click', function() {
-            goToNextPost();
-        });
-        
-        // Add the position indicator
-        const positionEl = document.createElement('span');
-        positionEl.id = 'position-indicator';
-        positionEl.style.marginLeft = '10px';
-        positionEl.style.padding = '5px 10px';
-        positionEl.style.background = '#222';
-        positionEl.style.borderRadius = '4px';
-        positionEl.style.color = 'var(--primary-color)';
-        positionEl.textContent = 'Pos: 0/0';
-        
-        // Add elements to header
-        headerEl.insertBefore(refreshBtn, headerEl.querySelector('.user-info'));
-        headerEl.insertBefore(postCountEl, headerEl.querySelector('.user-info'));
-        headerEl.insertBefore(prevBtn, headerEl.querySelector('.user-info'));
-        headerEl.insertBefore(nextBtn, headerEl.querySelector('.user-info'));
-        headerEl.insertBefore(positionEl, headerEl.querySelector('.user-info'));
-        
-        // Add function to update the display counters
-        function updateCounters() {
-            const postCount = document.getElementById('post-count');
-            if (postCount) {
-                postCount.textContent = `Posts: ${posts.length}`;
-            }
-            
-            const posIndicator = document.getElementById('position-indicator');
-            if (posIndicator && sortedPosts.length > 0) {
-                posIndicator.textContent = `Pos: ${currentPostIndex + 1}/${sortedPosts.length}`;
-            } else if (posIndicator) {
-                posIndicator.textContent = 'Pos: 0/0';
-            }
-        }
-        
-        // Add prev post function
+        // Function for previous post navigation (needed by swipe function)
         function goToPrevPost() {
             if (sortedPosts.length <= 1) {
                 return false;
