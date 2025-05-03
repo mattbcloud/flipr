@@ -56,10 +56,32 @@
             gap: 0.5rem;
         }
 
-        .user-info img {
+        /* New profile picture styles */
+        .profile-pic {
             width: 30px;
             height: 30px;
             border-radius: 50%;
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 0 8px rgba(57, 255, 20, 0.7);
+        }
+
+        .post-profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            color: var(--background-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 0 8px rgba(255, 16, 240, 0.7);
         }
 
         .user-info button {
@@ -180,13 +202,6 @@
             align-items: center;
             padding: 1rem;
             gap: 0.8rem;
-        }
-
-        .post-header img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
         }
 
         .post-author {
@@ -528,7 +543,7 @@
         <header>
             <h1><span style="color: #39FF14;">F</span><span style="color: #FF10F0;">l</span><span style="color: #39FF14;">i</span><span style="color: #FF10F0;">p</span><span style="color: #39FF14;">r</span></h1>
             <div class="user-info">
-                <img src="https://placehold.co/30x30/39FF14/111111" alt="Profile">
+                <div id="user-profile-pic" class="profile-pic">A</div>
                 <span id="username-display">Username</span>
                 <button id="logout-btn">Logout</button>
             </div>
@@ -584,6 +599,7 @@
         const showLoginLink = document.getElementById('show-login');
         const appInterface = document.getElementById('app-interface');
         const usernameDisplay = document.getElementById('username-display');
+        const userProfilePic = document.getElementById('user-profile-pic');
         const logoutBtn = document.getElementById('logout-btn');
         const postTextarea = document.getElementById('post-text');
         const imageInput = document.getElementById('image-input');
@@ -615,6 +631,12 @@
         
         // Track recently disliked posts to prevent them from showing up again too soon
         let recentlyDisliked = [];
+
+        // Function to get the first initial from a username
+        function getInitial(username) {
+            if (!username) return '?';
+            return username.charAt(0).toUpperCase();
+        }
         
         // Auth Event Listeners
         document.getElementById('login-btn').addEventListener('click', login);
@@ -646,6 +668,11 @@
                 authForms.classList.add('hidden');
                 appInterface.classList.remove('hidden');
                 usernameDisplay.textContent = currentUser.username;
+                
+                // Set user's profile picture initial
+                if (userProfilePic) {
+                    userProfilePic.textContent = getInitial(currentUser.username);
+                }
                 
                 // Add a small delay to ensure the DOM has updated
                 setTimeout(() => {
@@ -1058,9 +1085,12 @@
             const postDate = new Date(post.timestamp);
             const timeAgo = getTimeAgo(postDate);
             
+            // Get author's initial for profile pic
+            const authorInitial = getInitial(post.author);
+            
             postCard.innerHTML = `
                 <div class="post-header">
-                    <img src="https://placehold.co/40x40/FF10F0/111111" alt="${post.author}">
+                    <div class="post-profile-pic">${authorInitial}</div>
                     <div>
                         <div class="post-author">${post.author}</div>
                         <div class="post-time">${timeAgo}</div>
