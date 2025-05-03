@@ -555,8 +555,6 @@
                 </div>
             </div>
 
-
-
             <!-- Posts Feed -->
             <div class="feed" id="posts-feed" style="display: flex; min-height: 100px;">
                 <!-- Current post will be shown here -->
@@ -638,7 +636,6 @@
             createPost();
         });
         
-        // Check if user is logged in
         // Check if user is logged in
         function checkAuth() {
             if (currentUser) {
@@ -852,21 +849,6 @@
                     currentPostIndex = 0;
                     showCurrentPost();
                 }
-                
-                // Force a check that post is in the DOM
-                setTimeout(() => {
-                    const addedPost = document.querySelector(`.post-card[data-id="${newPost.id}"]`);
-                    if (!addedPost) {
-                        console.error('Post was not found in the DOM after creation');
-                        // Try one last time with a direct insertion
-                        postsFeed.innerHTML = '';
-                        postsFeed.appendChild(createPostElement(newPost));
-                        console.log('Attempted emergency direct post insertion');
-                    } else {
-                        console.log('Post confirmed in DOM');
-                    }
-                }, 100);
-                
             } catch (error) {
                 console.error('Error creating post:', error);
                 alert('There was an error creating your post. Please try again.');
@@ -1023,32 +1005,24 @@
             isLastPost = currentPostIndex >= sortedPosts.length - 1;
         }
         
-        // We'll completely rewrite this function to solve the issue of posts not showing up in the feed
-        // Go to next post with a completely different approach
+        // Go to next post - fixed implementation
         function goToNextPost() {
             console.log('Going to next post...');
             
-            // Always reload posts from localStorage to ensure we have the latest data
-            const freshPosts = JSON.parse(localStorage.getItem('posts')) || [];
-            if (freshPosts.length !== posts.length) {
-                console.log('Post count mismatch! localStorage:', freshPosts.length, 'vs memory:', posts.length);
-                posts = freshPosts;
-                // Re-sort posts
-                sortedPosts = [...posts].sort((a, b) => {
-                    const scoreA = a.likes - a.dislikes;
-                    const scoreB = b.likes - b.dislikes;
-                    return scoreB - scoreA;
-                });
-                console.log('Updated sorted posts, new count:', sortedPosts.length);
-            }
+            // Refresh posts from localStorage to ensure we have latest data
+            posts = JSON.parse(localStorage.getItem('posts')) || [];
+            
+            // Re-sort posts
+            sortedPosts = [...posts].sort((a, b) => {
+                const scoreA = a.likes - a.dislikes;
+                const scoreB = b.likes - b.dislikes;
+                return scoreB - scoreA;
+            });
             
             if (sortedPosts.length <= 1) {
                 console.log('Only one or zero posts available, nothing to navigate to');
                 return false;
             }
-            
-            // Get the current post ID
-            const currentPostId = sortedPosts[currentPostIndex]?.id;
             
             // Simple sequential navigation through ALL posts
             // Just go to the next post in the array
@@ -1061,7 +1035,7 @@
             return true;
         }
         
-        // Create Post Element
+        // Create Post Element - Fixed to handle swipe/like/dislike better
         function createPostElement(post) {
             const postCard = document.createElement('div');
             postCard.className = 'post-card';
@@ -1099,85 +1073,80 @@
             // Add swipe functionality
             let startX = 0;
             let currentX = 0;
-            let isTouchSwiping = false;
+            let isSwiping = false;
             const swipeThreshold = 10; // Pixels to move before considering it a swipe
+            let swipeProcessed = false; // Flag to prevent duplicate processing
             
+            // Touch event handling
             postCard.addEventListener('touchstart', function(e) {
                 startX = e.touches[0].clientX;
-                currentX = startX; // Initialize currentX
-                isTouchSwiping = false;
+                currentX = startX; 
+                isSwiping = false;
+                swipeProcessed = false;
                 this.style.transition = 'none';
             });
             
             postCard.addEventListener('touchmove', function(e) {
+                if (swipeProcessed) return;
+                
                 currentX = e.touches[0].clientX;
                 const diffX = currentX - startX;
                 
                 // Check if user has moved enough to be considered a swipe
-                if (!isTouchSwiping && Math.abs(diffX) >= swipeThreshold) {
-                    isTouchSwiping = true;
+                if (!isSwiping && Math.abs(diffX) >= swipeThreshold) {
+                    isSwiping = true;
                 }
                 
                 // Only proceed with swipe behavior if we're in swipe mode
-                if (isTouchSwiping) {
+                if (isSwiping) {
                     // Limit the swipe distance
-                    if (Math.abs(diffX) > 150) return;
+                    const limitedDiff = Math.max(Math.min(diffX, 150), -150);
                     
-                    this.style.transform = `translateX(${diffX}px)`;
+                    this.style.transform = `translateX(${limitedDiff}px)`;
                     
                     // Show overlay based on swipe direction
                     if (diffX > 0) {
-                        this.querySelector('.like-overlay').style.opacity = diffX / 150;
+                        this.querySelector('.like-overlay').style.opacity = limitedDiff / 150;
                         this.querySelector('.dislike-overlay').style.opacity = 0;
                     } else if (diffX < 0) {
-                        this.querySelector('.dislike-overlay').style.opacity = Math.abs(diffX) / 150;
+                        this.querySelector('.dislike-overlay').style.opacity = Math.abs(limitedDiff) / 150;
                         this.querySelector('.like-overlay').style.opacity = 0;
                     }
                 }
             });
             
             postCard.addEventListener('touchend', function(e) {
-                const diffX = currentX - startX;
+                if (swipeProcessed) return;
                 
+                const diffX = currentX - startX;
                 this.style.transition = 'transform 0.3s ease';
                 
                 // Only process swipe if we were actually swiping
-                if (isTouchSwiping) {
+                if (isSwiping) {
                     // Handle significant swipe
                     if (Math.abs(diffX) > 80) {
+                        swipeProcessed = true;
+                        
                         // Animate the swipe out
                         const direction = diffX > 0 ? 1 : -1;
                         this.style.transform = `translateX(${direction * window.innerWidth}px)`;
                         
-                        // Reset overlays with a delay
+                        // FIXED: Process like/dislike ONCE here, and only transition to next post AFTER animation
                         setTimeout(() => {
+                            // Reset overlays
                             this.querySelector('.like-overlay').style.opacity = 0;
                             this.querySelector('.dislike-overlay').style.opacity = 0;
                             
-                            // Register like or dislike
+                            // Process the like/dislike
                             if (diffX > 80) {
-                                // Like
-                                likePost(post.id);
+                                handlePostLike(post.id);
                             } else if (diffX < -80) {
-                                // Dislike
-                                dislikePost(post.id);
+                                handlePostDislike(post.id);
                             }
                             
-                        // Go to next post after animation
-                            setTimeout(() => {
-                                // This is where goToNextPost() was called before
-                                // Now we'll directly call the functions that update and show the next post
-                                if (diffX > 80) {
-                                    // Like
-                                    likePost(post.id);
-                                    // No need to call goToNextPost() as likePost now handles it
-                                } else if (diffX < -80) {
-                                    // Dislike
-                                    dislikePost(post.id);
-                                    // No need to call goToNextPost() as dislikePost now handles it
-                                }
-                            }, 50);
-                        }, 200);
+                            // After like/dislike is processed, go to next post
+                            goToNextPost();
+                        }, 300); // Wait for animation to complete
                     } else {
                         // Reset if not a significant swipe
                         this.style.transform = 'translateX(0)';
@@ -1192,35 +1161,38 @@
                 }
             });
             
-            // For desktop testing - click events instead of swipe
+            // For desktop testing - mouse events
             postCard.addEventListener('mousedown', function(e) {
                 startX = e.clientX;
-                currentX = startX; // Initialize currentX
-                let isMouseSwiping = false;
+                currentX = startX;
+                isSwiping = false;
+                swipeProcessed = false;
                 this.style.transition = 'none';
                 
                 const handleMouseMove = (e) => {
+                    if (swipeProcessed) return;
+                    
                     currentX = e.clientX;
                     const diffX = currentX - startX;
                     
                     // Check if user has moved enough to be considered a swipe
-                    if (!isMouseSwiping && Math.abs(diffX) >= swipeThreshold) {
-                        isMouseSwiping = true;
+                    if (!isSwiping && Math.abs(diffX) >= swipeThreshold) {
+                        isSwiping = true;
                     }
                     
                     // Only proceed with swipe behavior if we're in swipe mode
-                    if (isMouseSwiping) {
+                    if (isSwiping) {
                         // Limit the swipe distance
-                        if (Math.abs(diffX) > 150) return;
+                        const limitedDiff = Math.max(Math.min(diffX, 150), -150);
                         
-                        this.style.transform = `translateX(${diffX}px)`;
+                        this.style.transform = `translateX(${limitedDiff}px)`;
                         
                         // Show overlay based on swipe direction
                         if (diffX > 0) {
-                            this.querySelector('.like-overlay').style.opacity = diffX / 150;
+                            this.querySelector('.like-overlay').style.opacity = limitedDiff / 150;
                             this.querySelector('.dislike-overlay').style.opacity = 0;
                         } else if (diffX < 0) {
-                            this.querySelector('.dislike-overlay').style.opacity = Math.abs(diffX) / 150;
+                            this.querySelector('.dislike-overlay').style.opacity = Math.abs(limitedDiff) / 150;
                             this.querySelector('.like-overlay').style.opacity = 0;
                         }
                     }
@@ -1230,37 +1202,37 @@
                     document.removeEventListener('mousemove', handleMouseMove);
                     document.removeEventListener('mouseup', handleMouseUp);
                     
+                    if (swipeProcessed) return;
+                    
                     const diffX = currentX - startX;
                     this.style.transition = 'transform 0.3s ease';
                     
                     // Only process swipe if we were actually swiping
-                    if (isMouseSwiping) {
+                    if (isSwiping) {
                         // Handle significant swipe
                         if (Math.abs(diffX) > 80) {
+                            swipeProcessed = true;
+                            
                             // Animate the swipe out
                             const direction = diffX > 0 ? 1 : -1;
                             this.style.transform = `translateX(${direction * window.innerWidth}px)`;
                             
-                            // Reset overlays with a delay
+                            // FIXED: Process like/dislike ONCE here, and only transition to next post AFTER animation
                             setTimeout(() => {
+                                // Reset overlays
                                 this.querySelector('.like-overlay').style.opacity = 0;
                                 this.querySelector('.dislike-overlay').style.opacity = 0;
                                 
-                                // Go to next post after animation
-                                setTimeout(() => {
-                                    // This is where goToNextPost() was called before
-                                    // Now we'll directly call the functions that update and show the next post
-                                    if (diffX > 80) {
-                                        // Like
-                                        likePost(post.id);
-                                        // No need to call goToNextPost() as likePost now handles it
-                                    } else if (diffX < -80) {
-                                        // Dislike
-                                        dislikePost(post.id);
-                                        // No need to call goToNextPost() as dislikePost now handles it
-                                    }
-                                }, 50);
-                            }, 200);
+                                // Process the like/dislike
+                                if (diffX > 80) {
+                                    handlePostLike(post.id);
+                                } else if (diffX < -80) {
+                                    handlePostDislike(post.id);
+                                }
+                                
+                                // After like/dislike is processed, go to next post
+                                goToNextPost();
+                            }, 300); // Wait for animation to complete
                         } else {
                             // Reset if not a significant swipe
                             this.style.transform = 'translateX(0)';
@@ -1282,56 +1254,69 @@
             return postCard;
         }
         
-        // Like a post
-        function likePost(postId) {
+        // New function to handle post likes - separated from UI events
+        function handlePostLike(postId) {
             console.log('Liking post:', postId);
             
-            // Make sure we have the latest posts from localStorage
-            const storedPosts = JSON.parse(localStorage.getItem('posts')) || [];
-            posts = storedPosts;
+            // Get fresh posts from localStorage
+            const allPosts = JSON.parse(localStorage.getItem('posts')) || [];
             
-            const postIndex = posts.findIndex(p => p.id === postId);
+            const postIndex = allPosts.findIndex(p => p.id === postId);
             if (postIndex !== -1) {
                 // Update like count
-                posts[postIndex].likes++;
-                localStorage.setItem('posts', JSON.stringify(posts));
+                allPosts[postIndex].likes++;
+                localStorage.setItem('posts', JSON.stringify(allPosts));
                 
-                // Re-sort posts after the like
-                sortedPosts = [...posts].sort((a, b) => {
-                    const scoreA = a.likes - a.dislikes;
-                    const scoreB = b.likes - b.dislikes;
-                    return scoreB - scoreA;
-                });
-                
-                // Show next post (this will cycle through ALL posts now)
-                goToNextPost();
+                // Update our local posts array to match localStorage
+                posts = allPosts;
             }
         }
         
-        // Dislike a post
-        function dislikePost(postId) {
+        // New function to handle post dislikes - separated from UI events
+        function handlePostDislike(postId) {
             console.log('Disliking post:', postId);
             
-            // Make sure we have the latest posts from localStorage
-            const storedPosts = JSON.parse(localStorage.getItem('posts')) || [];
-            posts = storedPosts;
+            // Get fresh posts from localStorage
+            const allPosts = JSON.parse(localStorage.getItem('posts')) || [];
             
-            const postIndex = posts.findIndex(p => p.id === postId);
+            const postIndex = allPosts.findIndex(p => p.id === postId);
             if (postIndex !== -1) {
                 // Update dislike count
-                posts[postIndex].dislikes++;
-                localStorage.setItem('posts', JSON.stringify(posts));
+                allPosts[postIndex].dislikes++;
+                localStorage.setItem('posts', JSON.stringify(allPosts));
                 
-                // Re-sort posts after the dislike
-                sortedPosts = [...posts].sort((a, b) => {
-                    const scoreA = a.likes - a.dislikes;
-                    const scoreB = b.likes - b.dislikes;
-                    return scoreB - scoreA;
-                });
-                
-                // Show next post (this will cycle through ALL posts now)
-                goToNextPost();
+                // Update our local posts array to match localStorage
+                posts = allPosts;
             }
+        }
+        
+        // Function to go to previous post - called when swiping backwards
+        function goToPrevPost() {
+            console.log('Going to previous post...');
+            
+            // Refresh posts from localStorage to ensure we have latest data
+            posts = JSON.parse(localStorage.getItem('posts')) || [];
+            
+            // Re-sort posts
+            sortedPosts = [...posts].sort((a, b) => {
+                const scoreA = a.likes - a.dislikes;
+                const scoreB = b.likes - b.dislikes;
+                return scoreB - scoreA;
+            });
+            
+            if (sortedPosts.length <= 1) {
+                console.log('Only one or zero posts available, nothing to navigate to');
+                return false;
+            }
+            
+            // Simple sequential navigation through ALL posts with wraparound
+            const prevIndex = (currentPostIndex - 1 + sortedPosts.length) % sortedPosts.length;
+            
+            console.log(`Navigating from post index ${currentPostIndex} to previous index ${prevIndex}`);
+            currentPostIndex = prevIndex;
+            
+            showCurrentPost();
+            return true;
         }
         
         // Helper function to format time
@@ -1370,11 +1355,14 @@
         function addComment(postId, commentText) {
             if (!commentText.trim()) return;
             
-            const postIndex = posts.findIndex(p => p.id === postId);
+            // Get fresh posts from localStorage
+            const allPosts = JSON.parse(localStorage.getItem('posts')) || [];
+            
+            const postIndex = allPosts.findIndex(p => p.id === postId);
             if (postIndex === -1) return;
             
-            if (!posts[postIndex].comments) {
-                posts[postIndex].comments = [];
+            if (!allPosts[postIndex].comments) {
+                allPosts[postIndex].comments = [];
             }
             
             const newComment = {
@@ -1386,28 +1374,29 @@
                 replies: []
             };
             
-            posts[postIndex].comments.push(newComment);
-            localStorage.setItem('posts', JSON.stringify(posts));
+            allPosts[postIndex].comments.push(newComment);
+            localStorage.setItem('posts', JSON.stringify(allPosts));
+            
+            // Update our local posts array to match localStorage
+            posts = allPosts;
             
             // Re-sort posts and update current index
-            const currentPostId = sortedPosts[currentPostIndex].id;
+            const currentPostId = sortedPosts[currentPostIndex]?.id;
             sortedPosts = [...posts].sort((a, b) => {
                 const scoreA = a.likes - a.dislikes;
                 const scoreB = b.likes - b.dislikes;
                 return scoreB - scoreA;
             });
-            currentPostIndex = sortedPosts.findIndex(p => p.id === currentPostId);
+            
+            if (currentPostId) {
+                currentPostIndex = sortedPosts.findIndex(p => p.id === currentPostId);
+                if (currentPostIndex === -1) currentPostIndex = 0;
+            }
             
             // Update only the comments section of this post
             const commentsContainer = document.querySelector(`#comments-${postId} .comments-container`);
             if (commentsContainer) {
                 commentsContainer.innerHTML = renderComments(posts[postIndex].comments);
-                
-                // Update comment count
-                const commentCount = document.querySelector(`.post-card[data-id="${postId}"] .comment-count`);
-                if (commentCount) {
-                    commentCount.textContent = `(${posts[postIndex].comments.length})`;
-                }
             }
         }
         
@@ -1415,12 +1404,18 @@
         function addReply(commentId, replyText) {
             if (!replyText.trim()) return;
             
+            // Get fresh posts from localStorage
+            const allPosts = JSON.parse(localStorage.getItem('posts')) || [];
+            let updatedPost = null;
+            
             // Find the post and comment
-            for (const post of posts) {
+            for (const post of allPosts) {
                 if (!post.comments) continue;
                 
                 const commentIndex = post.comments.findIndex(c => c.id === commentId);
                 if (commentIndex !== -1) {
+                    updatedPost = post;
+                    
                     if (!post.comments[commentIndex].replies) {
                         post.comments[commentIndex].replies = [];
                     }
@@ -1434,7 +1429,10 @@
                     };
                     
                     post.comments[commentIndex].replies.push(newReply);
-                    localStorage.setItem('posts', JSON.stringify(posts));
+                    localStorage.setItem('posts', JSON.stringify(allPosts));
+                    
+                    // Update our local posts array to match localStorage
+                    posts = allPosts;
                     
                     // Update only this comment's replies
                     const repliesContainer = document.getElementById(`replies-${commentId}`);
@@ -1472,50 +1470,14 @@
                                 text.textContent = `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`;
                             }
                         }
-                        
-                        // Add event listeners to new reply buttons
-                        attachReplyButtonListeners();
                     }
                     
-                    return;
+                    break;
                 }
             }
         }
         
-        // Event delegation for dynamic elements
-        document.addEventListener('click', function(e) {
-            // Comment button functionality removed since comments are always shown
-            
-            // Add comment button clicked
-            if (e.target.closest('.add-comment-btn')) {
-                const button = e.target.closest('.add-comment-btn');
-                const postId = button.getAttribute('data-post-id');
-                const input = button.previousElementSibling;
-                
-                if (input && input.value) {
-                    addComment(postId, input.value);
-                    input.value = '';
-                }
-            }
-        });
-        
-        // Initialize app
-        checkAuth();
-        
-        // Function for previous post navigation (needed by swipe function)
-        function goToPrevPost() {
-            if (sortedPosts.length <= 1) {
-                return false;
-            }
-            
-            // Simply go to the previous post with wraparound
-            const prevIndex = (currentPostIndex - 1 + sortedPosts.length) % sortedPosts.length;
-            currentPostIndex = prevIndex;
-            showCurrentPost();
-            return true;
-        }
-        
-        // Event delegation for dynamic elements
+        // Event delegation for dynamic elements - FIXED version with a single handler
         document.addEventListener('click', function(e) {
             // Comment button clicked
             if (e.target.closest('.comment-btn')) {
@@ -1587,6 +1549,9 @@
                 }
             }
         });
+        
+        // Initialize app
+        checkAuth();
     </script>
 </body>
 </html>
