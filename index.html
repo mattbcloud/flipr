@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Social Media Sharing App</title>
+    <title>Flipr</title>
     <style>
         :root {
-            --primary-color: #4e84ff;
-            --background-color: #f5f7fa;
-            --card-bg: #ffffff;
-            --text-color: #333333;
-            --border-color: #e0e5ec;
-            --secondary-color: #757575;
+            --primary-color: #39FF14; /* Neon green */
+            --secondary-color: #FF10F0; /* Neon pink */
+            --background-color: #000000; /* Black background */
+            --card-bg: #111111; /* Dark card background */
+            --text-color: #ffffff; /* White text */
+            --border-color: #333333; /* Darker borders */
+            --secondary-text: #cccccc; /* Lighter gray for secondary text */
         }
 
         * {
@@ -28,9 +29,9 @@
         }
 
         header {
-            background-color: var(--card-bg);
+            background-color: rgba(17, 17, 17, 0.9);
             padding: 1rem;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(57, 255, 20, 0.3);
             position: fixed;
             top: 0;
             left: 0;
@@ -39,11 +40,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid var(--primary-color);
         }
 
         header h1 {
             color: var(--primary-color);
             font-size: 1.5rem;
+            text-shadow: 0 0 10px rgba(57, 255, 20, 0.7);
+            font-weight: bold;
         }
 
         .user-info {
@@ -61,7 +65,7 @@
         .user-info button {
             background-color: transparent;
             border: none;
-            color: var(--primary-color);
+            color: var(--secondary-color);
             cursor: pointer;
             font-weight: 600;
         }
@@ -76,8 +80,9 @@
             background-color: var(--card-bg);
             padding: 1rem;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.3);
             margin-bottom: 2rem;
+            border: 1px solid var(--primary-color);
         }
 
         .post-form textarea {
@@ -88,6 +93,8 @@
             resize: none;
             margin-bottom: 1rem;
             font-size: 1rem;
+            background-color: #222222;
+            color: var(--text-color);
         }
 
         .form-actions {
@@ -100,7 +107,7 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            color: var(--primary-color);
+            color: var(--secondary-color);
             cursor: pointer;
         }
 
@@ -144,10 +151,11 @@
             font-weight: 600;
             cursor: pointer;
             transition: background-color 0.2s;
+            box-shadow: 0 0 10px rgba(57, 255, 20, 0.7);
         }
 
         button.post-btn:hover {
-            background-color: #3a70e0;
+            background-color: #2aee05;
         }
 
         .feed {
@@ -159,11 +167,12 @@
         .post-card {
             background-color: var(--card-bg);
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 0 20px rgba(255, 16, 240, 0.2);
             overflow: hidden;
             position: relative;
             transition: transform 0.3s ease;
             touch-action: pan-x;
+            border: 1px solid var(--secondary-color);
         }
 
         .post-header {
@@ -182,11 +191,12 @@
 
         .post-author {
             font-weight: 600;
+            color: var(--secondary-color);
         }
 
         .post-time {
             font-size: 0.8rem;
-            color: #666;
+            color: var(--secondary-text);
         }
 
         .post-content {
@@ -196,6 +206,7 @@
         .post-content p {
             margin-bottom: 1rem;
             line-height: 1.5;
+            color: var(--text-color);
         }
 
         .post-image {
@@ -240,12 +251,6 @@
         .comments-section {
             padding: 0 1rem 1rem;
             border-top: 1px solid var(--border-color);
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-        
-        .comments-section.open {
             max-height: 500px;
             overflow-y: auto;
         }
@@ -262,15 +267,18 @@
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 0.9rem;
+            background-color: #222222;
+            color: var(--text-color);
         }
         
         .comment-form button {
-            background-color: var(--primary-color);
+            background-color: var(--secondary-color);
             color: white;
             border: none;
             padding: 0 1rem;
             border-radius: 4px;
             cursor: pointer;
+            box-shadow: 0 0 8px rgba(255, 16, 240, 0.6);
         }
         
         .comment {
@@ -291,11 +299,12 @@
         .comment-author {
             font-weight: 600;
             font-size: 0.9rem;
+            color: var(--secondary-color);
         }
         
         .comment-time {
             font-size: 0.8rem;
-            color: #666;
+            color: var(--secondary-text);
         }
         
         .comment-text {
@@ -309,12 +318,12 @@
             gap: 0.3rem;
             cursor: pointer;
             font-size: 0.85rem;
-            color: var(--secondary-color);
+            color: var(--primary-color);
             margin-bottom: 0.5rem;
         }
         
         .thread-toggle:hover {
-            color: var(--primary-color);
+            color: var(--secondary-color);
         }
         
         .thread-toggle-icon {
@@ -328,7 +337,7 @@
         .thread-replies {
             margin-left: 1.5rem;
             padding-left: 0.5rem;
-            border-left: 2px solid var(--border-color);
+            border-left: 2px solid var(--secondary-color);
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s ease;
@@ -351,16 +360,19 @@
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 0.85rem;
+            background-color: #222222;
+            color: var(--text-color);
         }
         
         .reply-form button {
-            background-color: var(--primary-color);
+            background-color: var(--secondary-color);
             color: white;
             border: none;
             padding: 0 0.8rem;
             border-radius: 4px;
             font-size: 0.85rem;
             cursor: pointer;
+            box-shadow: 0 0 5px rgba(255, 16, 240, 0.5);
         }
 
         .swipe-overlay {
@@ -385,26 +397,27 @@
         }
 
         .like-overlay {
-            background-color: rgba(46, 213, 115, 0.5);
+            background-color: rgba(57, 255, 20, 0.5);
         }
 
         .dislike-overlay {
-            background-color: rgba(235, 59, 90, 0.5);
+            background-color: rgba(255, 16, 240, 0.5);
         }
 
         .auth-container {
             background-color: var(--card-bg);
             border-radius: 8px;
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 25px rgba(57, 255, 20, 0.3), 0 0 15px rgba(255, 16, 240, 0.2);
             padding: 2rem;
             max-width: 400px;
             margin: 100px auto;
+            border: 2px solid var(--primary-color);
         }
 
         .auth-container h2 {
             margin-bottom: 1.5rem;
             text-align: center;
-            color: var(--primary-color);
+            color: var(--secondary-color);
         }
 
         .form-group {
@@ -415,6 +428,7 @@
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 500;
+            color: var(--primary-color);
         }
 
         .form-group input {
@@ -423,6 +437,8 @@
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 1rem;
+            background-color: #222222;
+            color: var(--text-color);
         }
 
         .auth-btn {
@@ -435,6 +451,7 @@
             font-weight: 600;
             cursor: pointer;
             margin-top: 1rem;
+            box-shadow: 0 0 10px rgba(57, 255, 20, 0.7);
         }
 
         .auth-toggle {
@@ -443,7 +460,7 @@
         }
 
         .auth-toggle a {
-            color: var(--primary-color);
+            color: var(--secondary-color);
             text-decoration: none;
             font-weight: 500;
         }
@@ -468,7 +485,7 @@
     <div id="auth-forms" class="auth-container">
         <!-- Login Form -->
         <div id="login-form">
-            <h2>Sign In</h2>
+            <h2>Sign In to Flipr</h2>
             <div class="form-group">
                 <label for="login-username">Username</label>
                 <input type="text" id="login-username" placeholder="Enter your username">
@@ -485,7 +502,7 @@
 
         <!-- Registration Form -->
         <div id="signup-form" class="hidden">
-            <h2>Create Account</h2>
+            <h2>Create Flipr Account</h2>
             <div class="form-group">
                 <label for="signup-username">Username</label>
                 <input type="text" id="signup-username" placeholder="Choose a username">
@@ -508,9 +525,9 @@
     <!-- Main App Interface (Initially Hidden) -->
     <div id="app-interface" class="hidden">
         <header>
-            <h1>SocialShare</h1>
+            <h1>Flipr</h1>
             <div class="user-info">
-                <img src="/api/placeholder/30/30" alt="Profile">
+                <img src="https://placehold.co/30x30/39FF14/111111" alt="Profile">
                 <span id="username-display">Username</span>
                 <button id="logout-btn">Logout</button>
             </div>
@@ -538,22 +555,30 @@
                 </div>
             </div>
 
+
+
             <!-- Posts Feed -->
-            <div class="feed" id="posts-feed">
+            <div class="feed" id="posts-feed" style="display: flex; min-height: 100px;">
                 <!-- Current post will be shown here -->
             </div>
         </div>
     </div>
 
     <script>
+        // Log startup for debugging
+        console.log('Application initializing...');
+        
         // User Authentication System
         const users = JSON.parse(localStorage.getItem('users')) || [];
         let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+        console.log('Loaded users:', users.length, 'Current user:', currentUser ? currentUser.username : 'none');
         
-        // Post Data
-        const posts = JSON.parse(localStorage.getItem('posts')) || [];
+        // Post Data - make sure this is initialized as a variable, not a constant
+        // This allows reassigning it to get fresh posts from localStorage
+        let posts = JSON.parse(localStorage.getItem('posts')) || [];
+        console.log('Loaded posts from localStorage:', posts.length);
         
-        // DOM Elements
+        // DOM Elements - add error checking for critical elements
         const authForms = document.getElementById('auth-forms');
         const loginForm = document.getElementById('login-form');
         const signupForm = document.getElementById('signup-form');
@@ -569,6 +594,19 @@
         const removeImageBtn = document.getElementById('remove-image');
         const submitPostBtn = document.getElementById('submit-post');
         const postsFeed = document.getElementById('posts-feed');
+        
+        // Verify critical elements exist
+        if (!postsFeed) {
+            console.error('ERROR: posts-feed element not found!');
+        } else {
+            console.log('posts-feed element found');
+        }
+        
+        if (!submitPostBtn) {
+            console.error('ERROR: submit-post button not found!');
+        } else {
+            console.log('submit-post button found');
+        }
         
         // Post pagination state
         let currentPostIndex = 0;
@@ -595,16 +633,28 @@
         // Post Creation Event Listeners
         imageInput.addEventListener('change', handleImageSelect);
         removeImageBtn.addEventListener('click', removeImage);
-        submitPostBtn.addEventListener('click', createPost);
+        submitPostBtn.addEventListener('click', function(e) {
+            e.preventDefault(); // Prevent any form submission behavior
+            createPost();
+        });
         
+        // Check if user is logged in
         // Check if user is logged in
         function checkAuth() {
             if (currentUser) {
+                console.log('User authenticated, showing app interface');
                 authForms.classList.add('hidden');
                 appInterface.classList.remove('hidden');
                 usernameDisplay.textContent = currentUser.username;
-                loadPosts();
+                
+                // Add a small delay to ensure the DOM has updated
+                setTimeout(() => {
+                    console.log('Loading posts after auth check');
+                    // Force reload all posts
+                    loadPosts();
+                }, 100);
             } else {
+                console.log('No user logged in, showing authentication forms');
                 authForms.classList.remove('hidden');
                 appInterface.classList.add('hidden');
             }
@@ -678,11 +728,30 @@
         function handleImageSelect(e) {
             const file = e.target.files[0];
             if (file) {
+                // Validate file is an image
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file');
+                    return;
+                }
+                
+                // Size check (optional, can be adjusted)
+                if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                    alert('Image is too large. Please select an image smaller than 5MB.');
+                    return;
+                }
+                
                 const reader = new FileReader();
+                
                 reader.onload = function(event) {
                     previewImg.src = event.target.result;
                     imagePreview.style.display = 'block';
                 };
+                
+                reader.onerror = function() {
+                    alert('Error reading the image file');
+                    console.error('FileReader error', reader.error);
+                };
+                
                 reader.readAsDataURL(file);
             }
         }
@@ -692,9 +761,12 @@
             imageInput.value = '';
             previewImg.src = '';
             imagePreview.style.display = 'none';
+            
+            // Ensure the src attribute is completely removed, not just set to empty
+            previewImg.removeAttribute('src');
         }
         
-        // Create New Post - FIXED FUNCTION
+        // Create New Post
         function createPost() {
             try {
                 // Check if user is logged in
@@ -704,68 +776,100 @@
                 }
                 
                 const text = postTextarea.value.trim();
-                const imageData = previewImg.src || null;
+                // Only use image data if it actually exists and isn't empty
+                const imageData = (previewImg.src && previewImg.src.trim() !== '' && previewImg.src.length > 0) ? previewImg.src : null;
                 
-                // Check if user has entered any content
-                if (!text && (!imageData || imageData === '')) {
+                if (!text && !imageData) {
                     alert('Please add some text or an image to your post');
                     return;
                 }
                 
-                // Create the post object
+                console.log('Creating new post with text:', text.substring(0, 20) + '...');
+                console.log('Image data present:', imageData ? 'Yes' : 'No');
+                
                 const newPost = {
                     id: Date.now().toString(),
                     author: currentUser.username,
                     authorId: currentUser.id,
                     text,
-                    image: imageData,
+                    image: imageData, // Will be null for text-only posts
                     timestamp: new Date().toISOString(),
                     likes: 0,
                     dislikes: 0,
                     comments: []
                 };
                 
-                // Add the post to local storage
+                // Get ALL existing posts from localStorage to ensure we have everyone's posts
+                const allPosts = JSON.parse(localStorage.getItem('posts')) || [];
+                
+                // Log current posts before adding new one
+                console.log('Current posts before adding new one:', allPosts.length);
+                
+                // Add the new post to the beginning of the posts array
+                allPosts.unshift(newPost);
+                
+                console.log('Posts after adding new one (before saving):', allPosts.length);
+                
+                // Save to localStorage
                 try {
-                    posts.unshift(newPost); // Add to beginning of array
-                    localStorage.setItem('posts', JSON.stringify(posts));
+                    localStorage.setItem('posts', JSON.stringify(allPosts));
+                    console.log('Saved posts to localStorage. New count:', allPosts.length);
+                    
+                    // Read back from localStorage to verify save worked
+                    const verifyPosts = JSON.parse(localStorage.getItem('posts')) || [];
+                    console.log('Verified posts count from localStorage:', verifyPosts.length);
+                    
+                    // Update our local posts array AFTER we've verified localStorage save
+                    posts = verifyPosts;
                 } catch (storageError) {
                     console.error('Failed to save post to localStorage:', storageError);
-                    alert('Could not save your post. Storage might be full, especially if you included a large image.');
-                    posts.shift(); // Remove the post we just added since we couldn't save it
-                    return;
+                    alert('There was an error saving your post. Please try again.');
+                    return; // Exit if we can't save
                 }
                 
                 // Reset form
                 postTextarea.value = '';
                 removeImage();
+                console.log('Form reset completed');
                 
-                // Update sortedPosts to include the new post
-                sortedPosts = [...posts].sort((a, b) => {
-                    const scoreA = a.likes - a.dislikes;
-                    const scoreB = b.likes - b.dislikes;
-                    if (scoreB !== scoreA) {
-                        return scoreB - scoreA;
-                    }
-                    // If scores are equal, sort by timestamp (newest first)
-                    return new Date(b.timestamp) - new Date(a.timestamp);
-                });
+                // Make sure the feed is visible
+                postsFeed.style.display = 'flex';
                 
-                // Find the new post in the sorted array
-                const newPostIndex = sortedPosts.findIndex(post => post.id === newPost.id);
+                // IMPORTANT: Completely reload the posts to ensure consistency
+                loadPosts();
+                
+                // Now find the new post in the sorted array and display it
+                const newPostIndex = sortedPosts.findIndex(p => p.id === newPost.id);
                 if (newPostIndex !== -1) {
+                    console.log('Found new post at index', newPostIndex, 'in sorted posts array');
                     currentPostIndex = newPostIndex;
+                    // Display the new post
+                    showCurrentPost();
+                    console.log('New post displayed with ID:', newPost.id);
                 } else {
-                    // If for some reason it's not found, show the first post
+                    console.error('Could not find new post in sorted array! Displaying first post instead.');
+                    // If we can't find the new post, just show the first post
                     currentPostIndex = 0;
+                    showCurrentPost();
                 }
                 
-                showCurrentPost();
+                // Force a check that post is in the DOM
+                setTimeout(() => {
+                    const addedPost = document.querySelector(`.post-card[data-id="${newPost.id}"]`);
+                    if (!addedPost) {
+                        console.error('Post was not found in the DOM after creation');
+                        // Try one last time with a direct insertion
+                        postsFeed.innerHTML = '';
+                        postsFeed.appendChild(createPostElement(newPost));
+                        console.log('Attempted emergency direct post insertion');
+                    } else {
+                        console.log('Post confirmed in DOM');
+                    }
+                }, 100);
                 
-                console.log('Post created successfully:', newPost.id);
             } catch (error) {
                 console.error('Error creating post:', error);
-                alert('An error occurred while creating your post. Please try again.');
+                alert('There was an error creating your post. Please try again.');
             }
         }
         
@@ -829,55 +933,140 @@
             }).join('');
         }
         
-        // Load Posts - UPDATED FUNCTION
+        // Load Posts
         function loadPosts() {
+            console.log('*** LOADING POSTS ***');
+            
+            // Always get fresh posts from localStorage
+            const storedPosts = JSON.parse(localStorage.getItem('posts')) || [];
+            console.log('Retrieved', storedPosts.length, 'posts from localStorage');
+            
+            // Update our global posts array
+            posts = storedPosts;
+            
             // Sort posts by likes minus dislikes (highest score first)
-            // If scores are equal, sort by timestamp (newest first)
             sortedPosts = [...posts].sort((a, b) => {
                 const scoreA = a.likes - a.dislikes;
                 const scoreB = b.likes - b.dislikes;
-                if (scoreB !== scoreA) {
-                    return scoreB - scoreA;
-                }
-                return new Date(b.timestamp) - new Date(a.timestamp);
+                return scoreB - scoreA;
             });
+            
+            // Log some info about the posts
+            console.log('Sorted posts count:', sortedPosts.length);
+            
+            if (sortedPosts.length > 0) {
+                console.log('First 5 post IDs:');
+                for (let i = 0; i < Math.min(5, sortedPosts.length); i++) {
+                    console.log(`[${i}] ID: ${sortedPosts[i].id}, Author: ${sortedPosts[i].author}, Score: ${sortedPosts[i].likes - sortedPosts[i].dislikes}`);
+                }
+            }
             
             // Show first post or no posts message
             if (sortedPosts.length > 0) {
                 currentPostIndex = 0;
+                console.log('Setting current post index to 0');
                 showCurrentPost();
+                console.log('Displayed first post from sorted posts');
             } else {
                 postsFeed.innerHTML = '<div class="post-card"><div class="post-content"><p>No posts yet. Be the first to share something!</p></div></div>';
+                console.log('No posts available, showing empty state');
                 isLastPost = true;
             }
+            
+            // Update the post counters in the UI
+            updateCounters();
+            
+            console.log('*** FINISHED LOADING POSTS ***');
         }
         
         // Show current post
         function showCurrentPost() {
-            if (sortedPosts.length === 0) return;
+            console.log('Showing post at index:', currentPostIndex);
+            
+            if (sortedPosts.length === 0) {
+                console.log('Cannot show post - no posts available');
+                postsFeed.innerHTML = '<div class="post-card"><div class="post-content"><p>No posts yet. Be the first to share something!</p></div></div>';
+                return;
+            }
+            
+            // Ensure the current index is valid
+            if (currentPostIndex < 0 || currentPostIndex >= sortedPosts.length) {
+                console.log('Resetting currentPostIndex from', currentPostIndex, 'to 0');
+                currentPostIndex = 0;
+            }
             
             const post = sortedPosts[currentPostIndex];
-            postsFeed.innerHTML = '';
+            if (!post) {
+                console.error('Post not found at index', currentPostIndex);
+                
+                // Try to recover by showing the first post
+                if (sortedPosts.length > 0) {
+                    currentPostIndex = 0;
+                    const firstPost = sortedPosts[0];
+                    if (firstPost) {
+                        console.log('Falling back to first post with ID:', firstPost.id);
+                    } else {
+                        console.error('Could not find first post even though sortedPosts.length =', sortedPosts.length);
+                        console.log('sortedPosts array:', JSON.stringify(sortedPosts));
+                    }
+                    showCurrentPost();
+                }
+                return;
+            }
             
+            console.log('Showing post with ID:', post.id, 'by author:', post.author);
+            
+            // Make sure feed is visible
+            postsFeed.style.display = 'flex';
+            
+            // Clear the feed and add the post
+            postsFeed.innerHTML = '';
             const postCard = createPostElement(post);
             postsFeed.appendChild(postCard);
             
             // Update last post flag
             isLastPost = currentPostIndex >= sortedPosts.length - 1;
+            
+            // Update the position counter
+            updateCounters();
         }
         
-        // Go to next post
+        // We'll completely rewrite this function to solve the issue of posts not showing up in the feed
+        // Go to next post with a completely different approach
         function goToNextPost() {
-            if (currentPostIndex < sortedPosts.length - 1) {
-                currentPostIndex++;
-                showCurrentPost();
-                return true;
-            } else {
-                // Loop back to first post
-                currentPostIndex = 0;
-                showCurrentPost();
-                return true;
+            console.log('Going to next post...');
+            
+            // Always reload posts from localStorage to ensure we have the latest data
+            const freshPosts = JSON.parse(localStorage.getItem('posts')) || [];
+            if (freshPosts.length !== posts.length) {
+                console.log('Post count mismatch! localStorage:', freshPosts.length, 'vs memory:', posts.length);
+                posts = freshPosts;
+                // Re-sort posts
+                sortedPosts = [...posts].sort((a, b) => {
+                    const scoreA = a.likes - a.dislikes;
+                    const scoreB = b.likes - b.dislikes;
+                    return scoreB - scoreA;
+                });
+                console.log('Updated sorted posts, new count:', sortedPosts.length);
             }
+            
+            if (sortedPosts.length <= 1) {
+                console.log('Only one or zero posts available, nothing to navigate to');
+                return false;
+            }
+            
+            // Get the current post ID
+            const currentPostId = sortedPosts[currentPostIndex]?.id;
+            
+            // Simple sequential navigation through ALL posts
+            // Just go to the next post in the array
+            const nextIndex = (currentPostIndex + 1) % sortedPosts.length;
+            
+            console.log(`Navigating from post index ${currentPostIndex} to ${nextIndex}`);
+            currentPostIndex = nextIndex;
+            
+            showCurrentPost();
+            return true;
         }
         
         // Create Post Element
@@ -892,7 +1081,7 @@
             
             postCard.innerHTML = `
                 <div class="post-header">
-                    <img src="/api/placeholder/40/40" alt="${post.author}">
+                    <img src="https://placehold.co/40x40/FF10F0/111111" alt="${post.author}">
                     <div>
                         <div class="post-author">${post.author}</div>
                         <div class="post-time">${timeAgo}</div>
@@ -900,16 +1089,7 @@
                 </div>
                 <div class="post-content">
                     <p>${post.text}</p>
-                    ${post.image ? `<img class="post-image" src="${post.image}" alt="Post image">` : ''}
-                </div>
-                <div class="post-actions">
-                    <button class="post-action-btn comment-btn" data-post-id="${post.id}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                        </svg>
-                        <span>Comments</span>
-                        <span class="comment-count">(${post.comments ? post.comments.length : 0})</span>
-                    </button>
+                    ${post.image && post.image.trim() !== '' ? `<img class="post-image" src="${post.image}" alt="">` : ''}
                 </div>
                 <div class="comments-section" id="comments-${post.id}">
                     <div class="comment-form">
@@ -920,34 +1100,20 @@
                         ${renderComments(post.comments || [])}
                     </div>
                 </div>
-                <div class="swipe-overlay like-overlay">
-                    <span class="swipe-icon">👍</span>
-                </div>
-                <div class="swipe-overlay dislike-overlay">
-                    <span class="swipe-icon">👎</span>
-                </div>
+                <div class="swipe-overlay like-overlay"></div>
+                <div class="swipe-overlay dislike-overlay"></div>
             `;
             
             // Add swipe functionality
             let startX = 0;
             let currentX = 0;
-            let hasMoved = false;
-            const moveThreshold = 20; // Minimum pixels to move before considering it a swipe
+            let isTouchSwiping = false;
+            const swipeThreshold = 10; // Pixels to move before considering it a swipe
             
-            // Touch events for mobile
             postCard.addEventListener('touchstart', function(e) {
-                // Ignore if interacting with interactive elements
-                if (e.target.closest('.post-action-btn') || 
-                    e.target.closest('input') || 
-                    e.target.closest('button') ||
-                    e.target.tagName === 'INPUT' ||
-                    e.target.tagName === 'BUTTON') {
-                    return;
-                }
-                
                 startX = e.touches[0].clientX;
-                currentX = startX;
-                hasMoved = false;
+                currentX = startX; // Initialize currentX
+                isTouchSwiping = false;
                 this.style.transition = 'none';
             });
             
@@ -955,10 +1121,13 @@
                 currentX = e.touches[0].clientX;
                 const diffX = currentX - startX;
                 
-                // Only start transforming if we've moved past the threshold
-                if (Math.abs(diffX) > moveThreshold) {
-                    hasMoved = true;
-                    
+                // Check if user has moved enough to be considered a swipe
+                if (!isTouchSwiping && Math.abs(diffX) >= swipeThreshold) {
+                    isTouchSwiping = true;
+                }
+                
+                // Only proceed with swipe behavior if we're in swipe mode
+                if (isTouchSwiping) {
                     // Limit the swipe distance
                     if (Math.abs(diffX) > 150) return;
                     
@@ -977,69 +1146,78 @@
             
             postCard.addEventListener('touchend', function(e) {
                 const diffX = currentX - startX;
+                
                 this.style.transition = 'transform 0.3s ease';
                 
-                // Only process as a swipe if the move threshold was exceeded
-                if (hasMoved && Math.abs(diffX) > 80) {
-                    // Animate the swipe out
-                    const direction = diffX > 0 ? 1 : -1;
-                    this.style.transform = `translateX(${direction * window.innerWidth}px)`;
-                    
-                    // Reset overlays with a delay
-                    setTimeout(() => {
+                // Only process swipe if we were actually swiping
+                if (isTouchSwiping) {
+                    // Handle significant swipe
+                    if (Math.abs(diffX) > 80) {
+                        // Animate the swipe out
+                        const direction = diffX > 0 ? 1 : -1;
+                        this.style.transform = `translateX(${direction * window.innerWidth}px)`;
+                        
+                        // Reset overlays with a delay
+                        setTimeout(() => {
+                            this.querySelector('.like-overlay').style.opacity = 0;
+                            this.querySelector('.dislike-overlay').style.opacity = 0;
+                            
+                            // Register like or dislike
+                            if (diffX > 80) {
+                                // Like
+                                likePost(post.id);
+                            } else if (diffX < -80) {
+                                // Dislike
+                                dislikePost(post.id);
+                            }
+                            
+                        // Go to next post after animation
+                            setTimeout(() => {
+                                // This is where goToNextPost() was called before
+                                // Now we'll directly call the functions that update and show the next post
+                                if (diffX > 80) {
+                                    // Like
+                                    likePost(post.id);
+                                    // No need to call goToNextPost() as likePost now handles it
+                                } else if (diffX < -80) {
+                                    // Dislike
+                                    dislikePost(post.id);
+                                    // No need to call goToNextPost() as dislikePost now handles it
+                                }
+                            }, 50);
+                        }, 200);
+                    } else {
+                        // Reset if not a significant swipe
+                        this.style.transform = 'translateX(0)';
+                        
+                        // Reset overlays
                         this.querySelector('.like-overlay').style.opacity = 0;
                         this.querySelector('.dislike-overlay').style.opacity = 0;
-                        
-                        // Register like or dislike
-                        if (diffX > 80) {
-                            // Like
-                            likePost(post.id);
-                        } else if (diffX < -80) {
-                            // Dislike
-                            dislikePost(post.id);
-                        }
-                        
-                        // Go to next post after animation
-                        setTimeout(() => {
-                            goToNextPost();
-                        }, 50);
-                    }, 200);
+                    }
                 } else {
-                    // Reset if not a significant swipe
+                    // It was just a tap, not a swipe
                     this.style.transform = 'translateX(0)';
-                    
-                    // Reset overlays
-                    this.querySelector('.like-overlay').style.opacity = 0;
-                    this.querySelector('.dislike-overlay').style.opacity = 0;
                 }
             });
             
             // For desktop testing - click events instead of swipe
             postCard.addEventListener('mousedown', function(e) {
-                // Ignore clicks on buttons, inputs, etc.
-                if (e.target.closest('.post-action-btn') || 
-                    e.target.closest('input') || 
-                    e.target.closest('button') ||
-                    e.target.tagName === 'INPUT' ||
-                    e.target.tagName === 'BUTTON') {
-                    return;
-                }
-                
-                // Track if mouse has moved enough to be considered a swipe
-                hasMoved = false;
-                
                 startX = e.clientX;
-                currentX = startX;
+                currentX = startX; // Initialize currentX
+                let isMouseSwiping = false;
                 this.style.transition = 'none';
                 
                 const handleMouseMove = (e) => {
                     currentX = e.clientX;
                     const diffX = currentX - startX;
                     
-                    // Only start transforming if we've moved past the threshold
-                    if (Math.abs(diffX) > moveThreshold) {
-                        hasMoved = true;
-                        
+                    // Check if user has moved enough to be considered a swipe
+                    if (!isMouseSwiping && Math.abs(diffX) >= swipeThreshold) {
+                        isMouseSwiping = true;
+                    }
+                    
+                    // Only proceed with swipe behavior if we're in swipe mode
+                    if (isMouseSwiping) {
                         // Limit the swipe distance
                         if (Math.abs(diffX) > 150) return;
                         
@@ -1063,38 +1241,45 @@
                     const diffX = currentX - startX;
                     this.style.transition = 'transform 0.3s ease';
                     
-                    // Only process as a swipe if the move threshold was exceeded
-                    if (hasMoved && Math.abs(diffX) > 80) {
-                        // Animate the swipe out
-                        const direction = diffX > 0 ? 1 : -1;
-                        this.style.transform = `translateX(${direction * window.innerWidth}px)`;
-                        
-                        // Reset overlays with a delay
-                        setTimeout(() => {
+                    // Only process swipe if we were actually swiping
+                    if (isMouseSwiping) {
+                        // Handle significant swipe
+                        if (Math.abs(diffX) > 80) {
+                            // Animate the swipe out
+                            const direction = diffX > 0 ? 1 : -1;
+                            this.style.transform = `translateX(${direction * window.innerWidth}px)`;
+                            
+                            // Reset overlays with a delay
+                            setTimeout(() => {
+                                this.querySelector('.like-overlay').style.opacity = 0;
+                                this.querySelector('.dislike-overlay').style.opacity = 0;
+                                
+                                // Go to next post after animation
+                                setTimeout(() => {
+                                    // This is where goToNextPost() was called before
+                                    // Now we'll directly call the functions that update and show the next post
+                                    if (diffX > 80) {
+                                        // Like
+                                        likePost(post.id);
+                                        // No need to call goToNextPost() as likePost now handles it
+                                    } else if (diffX < -80) {
+                                        // Dislike
+                                        dislikePost(post.id);
+                                        // No need to call goToNextPost() as dislikePost now handles it
+                                    }
+                                }, 50);
+                            }, 200);
+                        } else {
+                            // Reset if not a significant swipe
+                            this.style.transform = 'translateX(0)';
+                            
+                            // Reset overlays
                             this.querySelector('.like-overlay').style.opacity = 0;
                             this.querySelector('.dislike-overlay').style.opacity = 0;
-                            
-                            // Register like or dislike
-                            if (diffX > 80) {
-                                // Like
-                                likePost(post.id);
-                            } else if (diffX < -80) {
-                                // Dislike
-                                dislikePost(post.id);
-                            }
-                            
-                            // Go to next post after animation
-                            setTimeout(() => {
-                                goToNextPost();
-                            }, 50);
-                        }, 200);
+                        }
                     } else {
-                        // Reset if not a significant swipe
+                        // It was just a click, not a swipe
                         this.style.transform = 'translateX(0)';
-                        
-                        // Reset overlays
-                        this.querySelector('.like-overlay').style.opacity = 0;
-                        this.querySelector('.dislike-overlay').style.opacity = 0;
                     }
                 };
                 
@@ -1107,41 +1292,53 @@
         
         // Like a post
         function likePost(postId) {
+            console.log('Liking post:', postId);
+            
+            // Make sure we have the latest posts from localStorage
+            const storedPosts = JSON.parse(localStorage.getItem('posts')) || [];
+            posts = storedPosts;
+            
             const postIndex = posts.findIndex(p => p.id === postId);
             if (postIndex !== -1) {
+                // Update like count
                 posts[postIndex].likes++;
                 localStorage.setItem('posts', JSON.stringify(posts));
                 
-                // Re-sort posts after the swipe animation completes
+                // Re-sort posts after the like
                 sortedPosts = [...posts].sort((a, b) => {
                     const scoreA = a.likes - a.dislikes;
                     const scoreB = b.likes - b.dislikes;
-                    if (scoreB !== scoreA) {
-                        return scoreB - scoreA;
-                    }
-                    // If scores are equal, sort by timestamp (newest first)
-                    return new Date(b.timestamp) - new Date(a.timestamp);
+                    return scoreB - scoreA;
                 });
+                
+                // Show next post (this will cycle through ALL posts now)
+                goToNextPost();
             }
         }
         
         // Dislike a post
         function dislikePost(postId) {
+            console.log('Disliking post:', postId);
+            
+            // Make sure we have the latest posts from localStorage
+            const storedPosts = JSON.parse(localStorage.getItem('posts')) || [];
+            posts = storedPosts;
+            
             const postIndex = posts.findIndex(p => p.id === postId);
             if (postIndex !== -1) {
+                // Update dislike count
                 posts[postIndex].dislikes++;
                 localStorage.setItem('posts', JSON.stringify(posts));
                 
-                // Re-sort posts after the swipe animation completes
+                // Re-sort posts after the dislike
                 sortedPosts = [...posts].sort((a, b) => {
                     const scoreA = a.likes - a.dislikes;
                     const scoreB = b.likes - b.dislikes;
-                    if (scoreB !== scoreA) {
-                        return scoreB - scoreA;
-                    }
-                    // If scores are equal, sort by timestamp (newest first)
-                    return new Date(b.timestamp) - new Date(a.timestamp);
+                    return scoreB - scoreA;
                 });
+                
+                // Show next post (this will cycle through ALL posts now)
+                goToNextPost();
             }
         }
         
@@ -1177,7 +1374,7 @@
             return seconds < 10 ? 'just now' : `${seconds} seconds ago`;
         }
         
-        // Add comment to post
+                // Add comment to post
         function addComment(postId, commentText) {
             if (!commentText.trim()) return;
             
@@ -1205,10 +1402,7 @@
             sortedPosts = [...posts].sort((a, b) => {
                 const scoreA = a.likes - a.dislikes;
                 const scoreB = b.likes - b.dislikes;
-                if (scoreB !== scoreA) {
-                    return scoreB - scoreA;
-                }
-                return new Date(b.timestamp) - new Date(a.timestamp);
+                return scoreB - scoreA;
             });
             currentPostIndex = sortedPosts.findIndex(p => p.id === currentPostId);
             
@@ -1222,12 +1416,6 @@
                 if (commentCount) {
                     commentCount.textContent = `(${posts[postIndex].comments.length})`;
                 }
-                
-                // Add event listeners to new thread toggles
-                attachThreadToggleListeners();
-                
-                // Add event listeners to new reply buttons
-                attachReplyButtonListeners();
             }
         }
         
@@ -1304,6 +1492,125 @@
         
         // Event delegation for dynamic elements
         document.addEventListener('click', function(e) {
+            // Comment button functionality removed since comments are always shown
+            
+            // Add comment button clicked
+            if (e.target.closest('.add-comment-btn')) {
+                const button = e.target.closest('.add-comment-btn');
+                const postId = button.getAttribute('data-post-id');
+                const input = button.previousElementSibling;
+                
+                if (input && input.value) {
+                    addComment(postId, input.value);
+                    input.value = '';
+                }
+            }
+        });
+        
+        // Initialize app
+        checkAuth();
+        
+        // Add debug controls to the header for improved testing
+        const headerEl = document.querySelector('header');
+        
+        // Refresh button
+        const refreshBtn = document.createElement('button');
+        refreshBtn.textContent = '🔄 Refresh';
+        refreshBtn.style.marginLeft = '10px';
+        refreshBtn.style.padding = '5px 10px';
+        refreshBtn.style.background = 'var(--primary-color)';
+        refreshBtn.style.border = 'none';
+        refreshBtn.style.borderRadius = '4px';
+        refreshBtn.style.color = '#000';
+        refreshBtn.style.cursor = 'pointer';
+        refreshBtn.addEventListener('click', function() {
+            console.log('Manual refresh triggered');
+            loadPosts();
+        });
+        
+        // Post count indicator
+        const postCountEl = document.createElement('span');
+        postCountEl.id = 'post-count';
+        postCountEl.style.marginLeft = '10px';
+        postCountEl.style.padding = '5px 10px';
+        postCountEl.style.background = '#222';
+        postCountEl.style.borderRadius = '4px';
+        postCountEl.style.color = 'var(--secondary-color)';
+        postCountEl.textContent = 'Posts: 0';
+        
+        // Add buttons to cycle through posts
+        const prevBtn = document.createElement('button');
+        prevBtn.textContent = '◀ Prev';
+        prevBtn.style.marginLeft = '10px';
+        prevBtn.style.padding = '5px 10px';
+        prevBtn.style.background = 'var(--secondary-color)';
+        prevBtn.style.border = 'none';
+        prevBtn.style.borderRadius = '4px 0 0 4px';
+        prevBtn.style.color = '#000';
+        prevBtn.style.cursor = 'pointer';
+        prevBtn.addEventListener('click', function() {
+            goToPrevPost();
+        });
+        
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = 'Next ▶';
+        nextBtn.style.padding = '5px 10px';
+        nextBtn.style.background = 'var(--secondary-color)';
+        nextBtn.style.border = 'none';
+        nextBtn.style.borderRadius = '0 4px 4px 0';
+        nextBtn.style.color = '#000';
+        nextBtn.style.cursor = 'pointer';
+        nextBtn.addEventListener('click', function() {
+            goToNextPost();
+        });
+        
+        // Add the position indicator
+        const positionEl = document.createElement('span');
+        positionEl.id = 'position-indicator';
+        positionEl.style.marginLeft = '10px';
+        positionEl.style.padding = '5px 10px';
+        positionEl.style.background = '#222';
+        positionEl.style.borderRadius = '4px';
+        positionEl.style.color = 'var(--primary-color)';
+        positionEl.textContent = 'Pos: 0/0';
+        
+        // Add elements to header
+        headerEl.insertBefore(refreshBtn, headerEl.querySelector('.user-info'));
+        headerEl.insertBefore(postCountEl, headerEl.querySelector('.user-info'));
+        headerEl.insertBefore(prevBtn, headerEl.querySelector('.user-info'));
+        headerEl.insertBefore(nextBtn, headerEl.querySelector('.user-info'));
+        headerEl.insertBefore(positionEl, headerEl.querySelector('.user-info'));
+        
+        // Add function to update the display counters
+        function updateCounters() {
+            const postCount = document.getElementById('post-count');
+            if (postCount) {
+                postCount.textContent = `Posts: ${posts.length}`;
+            }
+            
+            const posIndicator = document.getElementById('position-indicator');
+            if (posIndicator && sortedPosts.length > 0) {
+                posIndicator.textContent = `Pos: ${currentPostIndex + 1}/${sortedPosts.length}`;
+            } else if (posIndicator) {
+                posIndicator.textContent = 'Pos: 0/0';
+            }
+        }
+        
+        // Add prev post function
+        function goToPrevPost() {
+            if (sortedPosts.length <= 1) {
+                return false;
+            }
+            
+            // Simply go to the previous post with wraparound
+            const prevIndex = (currentPostIndex - 1 + sortedPosts.length) % sortedPosts.length;
+            currentPostIndex = prevIndex;
+            showCurrentPost();
+            return true;
+        }
+        
+        // Event delegation for dynamic elements
+        document.addEventListener('click', function(e) {
             // Comment button clicked
             if (e.target.closest('.comment-btn')) {
                 const button = e.target.closest('.comment-btn');
@@ -1326,77 +1633,52 @@
                     input.value = '';
                 }
             }
-        });
-        
-        // Function to attach thread toggle listeners
-        function attachThreadToggleListeners() {
-            document.querySelectorAll('.thread-toggle').forEach(toggle => {
-                toggle.removeEventListener('click', threadToggleHandler); // Remove any existing listeners
-                toggle.addEventListener('click', threadToggleHandler);
-            });
-        }
-        
-        // Thread toggle handler
-        function threadToggleHandler(e) {
-            const commentId = this.getAttribute('data-comment-id');
-            const repliesContainer = document.getElementById(`replies-${commentId}`);
             
-            if (repliesContainer) {
-                repliesContainer.classList.toggle('open');
-                const icon = this.querySelector('.thread-toggle-icon');
+            // Thread toggle clicked (for showing/hiding replies)
+            if (e.target.closest('.thread-toggle')) {
+                const toggle = e.target.closest('.thread-toggle');
+                const commentId = toggle.getAttribute('data-comment-id');
+                const repliesContainer = document.getElementById(`replies-${commentId}`);
                 
-                if (icon) {
-                    icon.classList.toggle('open');
-                }
-                
-                // Find the comment to get reply count
-                for (const post of posts) {
-                    if (!post.comments) continue;
+                if (repliesContainer) {
+                    repliesContainer.classList.toggle('open');
+                    const icon = toggle.querySelector('.thread-toggle-icon');
                     
-                    const comment = post.comments.find(c => c.id === commentId);
-                    if (comment && comment.replies) {
-                        const text = this.querySelector('span:last-child');
-                        if (text) {
-                            const replyCount = comment.replies.length;
-                            if (repliesContainer.classList.contains('open')) {
-                                text.textContent = `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`;
-                            } else {
-                                text.textContent = `Show ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`;
+                    if (icon) {
+                        icon.classList.toggle('open');
+                    }
+                    
+                    // Find the comment to get reply count
+                    for (const post of posts) {
+                        if (!post.comments) continue;
+                        
+                        const comment = post.comments.find(c => c.id === commentId);
+                        if (comment && comment.replies) {
+                            const text = toggle.querySelector('span:last-child');
+                            if (text) {
+                                const replyCount = comment.replies.length;
+                                if (repliesContainer.classList.contains('open')) {
+                                    text.textContent = `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`;
+                                } else {
+                                    text.textContent = `Show ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`;
+                                }
                             }
+                            break;
                         }
-                        break;
                     }
                 }
             }
-        }
-        
-        // Function to attach reply button listeners
-        function attachReplyButtonListeners() {
-            document.querySelectorAll('.add-reply-btn').forEach(button => {
-                button.removeEventListener('click', replyButtonHandler); // Remove any existing listeners
-                button.addEventListener('click', replyButtonHandler);
-            });
-        }
-        
-        // Reply button handler
-        function replyButtonHandler(e) {
-            const commentId = this.getAttribute('data-comment-id');
-            const input = this.previousElementSibling;
             
-            if (input && input.value) {
-                addReply(commentId, input.value);
-                input.value = '';
-            }
-        }
-        
-        // Initialize app
-        checkAuth();
-        
-        // Attach event listeners after posts are loaded
-        postsFeed.addEventListener('DOMNodeInserted', function(e) {
-            if (e.target.classList && e.target.classList.contains('post-card')) {
-                attachThreadToggleListeners();
-                attachReplyButtonListeners();
+            // Add reply button clicked
+            if (e.target.closest('.add-reply-btn')) {
+                const button = e.target.closest('.add-reply-btn');
+                const commentId = button.getAttribute('data-comment-id');
+                const input = button.previousElementSibling;
+                
+                if (input && input.value) {
+                    addReply(commentId, input.value);
+                    input.value = '';
+                }
             }
         });
     </script>
