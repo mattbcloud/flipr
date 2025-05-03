@@ -548,7 +548,6 @@
                             <circle cx="8.5" cy="8.5" r="1.5"/>
                             <polyline points="21 15 16 10 5 21"/>
                         </svg>
-                        <span>Add Image</span>
                         <input type="file" id="image-input" accept="image/*">
                     </label>
                     <button class="post-btn" id="submit-post">Post</button>
@@ -612,6 +611,9 @@
         
         // End of posts flag
         let isLastPost = false;
+        
+        // Track recently disliked posts to prevent them from showing up again too soon
+        let recentlyDisliked = [];
         
         // Auth Event Listeners
         document.getElementById('login-btn').addEventListener('click', login);
@@ -1005,7 +1007,7 @@
             isLastPost = currentPostIndex >= sortedPosts.length - 1;
         }
         
-        // Go to next post - fixed implementation
+        // Go to next post - fixed implementation with disliked post skipping
         function goToNextPost() {
             console.log('Going to next post...');
             
@@ -1024,10 +1026,20 @@
                 return false;
             }
             
-            // Simple sequential navigation through ALL posts
-            // Just go to the next post in the array
-            const nextIndex = (currentPostIndex + 1) % sortedPosts.length;
+            // Find the next post that isn't in the recently disliked list
+            let attemptsCount = 0;
+            let nextIndex = (currentPostIndex + 1) % sortedPosts.length;
+            const maxAttempts = sortedPosts.length; // Prevent infinite loop
             
+            // Keep looking for a next post that hasn't been recently disliked
+            while (recentlyDisliked.includes(sortedPosts[nextIndex].id) && attemptsCount < maxAttempts) {
+                console.log(`Skipping recently disliked post at index ${nextIndex}`);
+                nextIndex = (nextIndex + 1) % sortedPosts.length;
+                attemptsCount++;
+            }
+            
+            // If we've tried all posts and they're all disliked, just show the next one
+            // This prevents getting stuck if all posts have been disliked recently
             console.log(`Navigating from post index ${currentPostIndex} to ${nextIndex}`);
             currentPostIndex = nextIndex;
             
@@ -1287,6 +1299,13 @@
                 
                 // Update our local posts array to match localStorage
                 posts = allPosts;
+                
+                // Add this post to the recently disliked list so we don't show it again too soon
+                // Keep only the last 5 disliked posts
+                recentlyDisliked.push(postId);
+                if (recentlyDisliked.length > 5) {
+                    recentlyDisliked.shift(); // Remove oldest disliked post
+                }
             }
         }
         
