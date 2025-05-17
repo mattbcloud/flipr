@@ -736,13 +736,8 @@
         const userLikesRef = database.ref('user-likes');
         const userDislikesRef = database.ref('user-dislikes');
         
-        // Enable offline persistence
-        try {
-            firebase.database().enablePersistence();
-            console.log('Firebase offline persistence enabled');
-        } catch (error) {
-            console.error('Error enabling offline persistence:', error);
-        }
+        // Firebase connection status indicator
+        console.log('Firebase initialized');
         
         // Firebase connection status
         const connectedRef = database.ref('.info/connected');
