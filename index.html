@@ -1147,6 +1147,16 @@
                     postTextarea.value = '';
                     removeImage();
                     removeVideo();
+                    
+                    // Manually add the new post to the beginning of sortedPosts
+                    // and immediately display it without waiting for Firebase listener
+                    const localNewPost = {...newPost, timestamp: Date.now()};
+                    sortedPosts.unshift(localNewPost);
+                    
+                    // Reset to show the first post (which is the new one)
+                    currentPostIndex = 0;
+                    showCurrentPost();
+                    
                     hideLoading();
                 })
                 .catch((error) => {
@@ -1221,10 +1231,11 @@
                         return scoreB - scoreA;
                     });
                     
-                    // If this is from the current user, show it immediately
-                    if (newPost.authorId === currentUser.uid && currentPostIndex === 0) {
-                        showCurrentPost();
-                    }
+                    // If this is from the current user and we're showing a different post,
+                    // we don't need to update because we already manually showed it in createFirebasePost
+                } else {
+                    // Update the existing post with the latest data from Firebase
+                    sortedPosts[existingIndex] = newPost;
                 }
             });
             
