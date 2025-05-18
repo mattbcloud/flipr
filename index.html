@@ -1446,25 +1446,45 @@
         function attachListenerToCurrentPost() {
             // Detach previous listener if any
             if (currentPostListener) {
-                currentPostListener();
+                // Remove the previous listener
+                const previousPostId = sortedPosts[currentPostIndex]?.id;
+                if (previousPostId) {
+                    postsRef.child(previousPostId).off('value', currentPostListener);
+                }
                 currentPostListener = null;
             }
             
             if (sortedPosts.length === 0 || currentPostIndex >= sortedPosts.length) return;
             
-            const currentPostId = sortedPosts[currentPostIndex].id;
+            const currentPost = sortedPosts[currentPostIndex];
+            if (!currentPost || !currentPost.id) return;
+            
+            const currentPostId = currentPost.id;
             
             // Create a new listener for just this post
-            currentPostListener = postsRef.child(currentPostId).on('value', (snapshot) => {
+            const postListener = (snapshot) => {
                 const updatedPost = snapshot.val();
                 if (updatedPost) {
                     // Update the post in our array
                     sortedPosts[currentPostIndex] = updatedPost;
                     
-                    // Update the UI
-                    showCurrentPost();
+                    // Update the UI without recursively calling attachListenerToCurrentPost
+                    try {
+                        const post = sortedPosts[currentPostIndex];
+                        if (post) {
+                            postsFeed.innerHTML = '';
+                            const postCard = createPostElement(post);
+                            postsFeed.appendChild(postCard);
+                            isLastPost = currentPostIndex >= sortedPosts.length - 1;
+                        }
+                    } catch (error) {
+                        console.error('Error updating post UI:', error);
+                    }
                 }
-            });
+            };
+            
+            postsRef.child(currentPostId).on('value', postListener);
+            currentPostListener = postListener;
         }
         
         // Show current post
@@ -1501,10 +1521,14 @@
             isLastPost = currentPostIndex >= sortedPosts.length - 1;
             
             // Attach listener to current post
-            attachListenerToCurrentPost();
+            try {
+                attachListenerToCurrentPost();
+            } catch (error) {
+                console.error('Error attaching post listener:', error);
+            }
             
             // Check if user has already liked or disliked this post
-            if (currentUser) {
+            if (currentUser && post.id) {
                 userLikesRef.child(`${currentUser.uid}/${post.id}`).once('value', snapshot => {
                     if (snapshot.exists() && snapshot.val() === true) {
                         // User already liked this post
