@@ -1246,6 +1246,7 @@
                 const newPost = {
                     id: postId,
                     authorId: currentUser.uid,
+                    author: currentUser.username, // Include username directly for simplicity
                     text: text,
                     timestamp: firebase.database.ServerValue.TIMESTAMP,
                     likes: 0,
@@ -1287,7 +1288,7 @@
                 
                 // Reset to show the first post (which is the new one)
                 currentPostIndex = 0;
-                showCurrentPost();
+                displayCurrentPost(); // Use the safer display function instead
                 
                 hideLoading();
             } catch (error) {
@@ -1308,6 +1309,19 @@
             lastLoadedPostTimestamp = null;
             noMorePostsToLoad = false;
             
+            // Remove any existing listeners
+            if (currentPostListener) {
+                try {
+                    const previousPostId = sortedPosts[currentPostIndex]?.id;
+                    if (previousPostId) {
+                        postsRef.child(previousPostId).off('value', currentPostListener);
+                    }
+                } catch (e) {
+                    console.error('Error removing listener:', e);
+                }
+                currentPostListener = null;
+            }
+            
             // Get posts from Firebase with pagination
             postsRef.orderByChild('timestamp')
                    .limitToLast(POSTS_PER_PAGE)
@@ -1327,14 +1341,15 @@
                         
                         // Sort posts by likes minus dislikes (highest score first)
                         sortedPosts = postsData.sort((a, b) => {
-                            const scoreA = a.likes - a.dislikes;
-                            const scoreB = b.likes - b.dislikes;
+                            const scoreA = (a.likes || 0) - (a.dislikes || 0);
+                            const scoreB = (b.likes || 0) - (b.dislikes || 0);
                             return scoreB - scoreA;
                         });
                         
                         if (sortedPosts.length > 0) {
                             currentPostIndex = 0;
-                            showCurrentPost();
+                            // Display the post without attaching a listener initially
+                            displayCurrentPost();
                             
                             // Show load more button if there might be more posts
                             if (postsData.length >= POSTS_PER_PAGE) {
@@ -1357,6 +1372,63 @@
                     postsFeed.innerHTML = '<div class="post-card"><div class="post-content"><p>Error loading posts. Please try again later.</p></div></div>';
                     hideLoading();
                 });
+        }
+        
+        // Display the current post without attaching a listener
+        function displayCurrentPost() {
+            if (sortedPosts.length === 0) {
+                postsFeed.innerHTML = '<div class="post-card"><div class="post-content"><p>No posts yet. Be the first to share something!</p></div></div>';
+                return;
+            }
+            
+            // Ensure the current index is valid
+            if (currentPostIndex < 0 || currentPostIndex >= sortedPosts.length) {
+                currentPostIndex = 0;
+            }
+            
+            const post = sortedPosts[currentPostIndex];
+            if (!post) {
+                // Try to recover by showing the first post
+                if (sortedPosts.length > 0) {
+                    currentPostIndex = 0;
+                    displayCurrentPost();
+                }
+                return;
+            }
+            
+            // Make sure feed is visible
+            postsFeed.style.display = 'flex';
+            
+            // Clear the feed and add the post
+            postsFeed.innerHTML = '';
+            const postCard = createPostElement(post);
+            postsFeed.appendChild(postCard);
+            
+            // Update last post flag
+            isLastPost = currentPostIndex >= sortedPosts.length - 1;
+            
+            // Check if user has already liked or disliked this post
+            if (currentUser && post.id) {
+                userLikesRef.child(`${currentUser.uid}/${post.id}`).once('value', snapshot => {
+                    if (snapshot.exists() && snapshot.val() === true) {
+                        // User already liked this post
+                        const likeIcon = postCard.querySelector('.like-icon');
+                        if (likeIcon) {
+                            likeIcon.style.color = 'var(--primary-color)';
+                        }
+                    }
+                });
+                
+                userDislikesRef.child(`${currentUser.uid}/${post.id}`).once('value', snapshot => {
+                    if (snapshot.exists() && snapshot.val() === true) {
+                        // User already disliked this post
+                        const dislikeIcon = postCard.querySelector('.dislike-icon');
+                        if (dislikeIcon) {
+                            dislikeIcon.style.color = 'var(--secondary-color)';
+                        }
+                    }
+                });
+            }
         }
         
         // Load More Posts (Pagination)
@@ -1559,13 +1631,13 @@
             const maxAttempts = sortedPosts.length;
             
             // Keep looking for a next post that hasn't been recently disliked
-            while (recentlyDisliked.includes(sortedPosts[nextIndex].id) && attemptsCount < maxAttempts) {
+            while (recentlyDisliked.includes(sortedPosts[nextIndex]?.id) && attemptsCount < maxAttempts) {
                 nextIndex = (nextIndex + 1) % sortedPosts.length;
                 attemptsCount++;
             }
             
             currentPostIndex = nextIndex;
-            showCurrentPost();
+            displayCurrentPost(); // Use the safer display function
             return true;
         }
         
