@@ -1147,6 +1147,18 @@
                     postTextarea.value = '';
                     removeImage();
                     removeVideo();
+                    
+                    // Create a client-side copy of the post with current timestamp
+                    const clientPost = {...newPost};
+                    clientPost.timestamp = Date.now(); // Use current time since Firebase.ServerValue.TIMESTAMP can't be used client-side
+                    
+                    // Add to beginning of posts array
+                    sortedPosts.unshift(clientPost);
+                    
+                    // Set currentPostIndex to 0 to show the new post
+                    currentPostIndex = 0;
+                    showCurrentPost();
+                    
                     hideLoading();
                 })
                 .catch((error) => {
