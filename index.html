@@ -591,8 +591,8 @@
         <div id="login-form">
             <h2><span style="color: #39FF14;">F</span><span style="color: #FF10F0;">l</span><span style="color: #39FF14;">i</span><span style="color: #FF10F0;">p</span><span style="color: #39FF14;">r</span></h2>
             <div class="form-group">
-                <label for="login-email">Email</label>
-                <input type="email" id="login-email" placeholder="Enter your email">
+                <label for="login-username">Username</label>
+                <input type="text" id="login-username" placeholder="Enter your username">
             </div>
             <div class="form-group">
                 <label for="login-password">Password</label>
@@ -852,20 +852,51 @@
         
         // Login Function
         function login() {
-            const email = document.getElementById('login-email').value.trim();
+            const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
             
-            if (!email || !password) {
-                alert('Please enter both email and password');
+            if (!username || !password) {
+                alert('Please enter both username and password');
                 return;
             }
             
             showLoading();
             
-            auth.signInWithEmailAndPassword(email, password)
+            // First look up the email associated with this username
+            usersRef.orderByChild('username').equalTo(username).once('value')
+                .then((snapshot) => {
+                    if (!snapshot.exists()) {
+                        hideLoading();
+                        alert('Username not found');
+                        return;
+                    }
+                    
+                    // Get the user data which contains the email
+                    let userData = null;
+                    let userKey = null;
+                    
+                    snapshot.forEach((childSnapshot) => {
+                        userData = childSnapshot.val();
+                        userKey = childSnapshot.key;
+                        return true; // Break the forEach loop after the first result
+                    });
+                    
+                    if (!userData || !userData.email) {
+                        hideLoading();
+                        alert('Account information is incomplete');
+                        return;
+                    }
+                    
+                    // Now login with the email and password
+                    auth.signInWithEmailAndPassword(userData.email, password)
+                        .catch((error) => {
+                            hideLoading();
+                            alert(`Login failed: ${error.message}`);
+                        });
+                })
                 .catch((error) => {
                     hideLoading();
-                    alert(`Login failed: ${error.message}`);
+                    alert(`Error looking up username: ${error.message}`);
                 });
         }
         
