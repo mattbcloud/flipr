@@ -1025,46 +1025,35 @@
                     removeImage();
                 }
                 
-                const reader = new FileReader();
+                // Simplified approach: Create URL directly from file
+                const videoURL = URL.createObjectURL(file);
                 
-                reader.onload = function(event) {
-                    // Create a blob URL for the video
-                    const blob = new Blob([event.target.result], { type: file.type });
-                    const videoURL = URL.createObjectURL(blob);
-                    
-                    // Set the video source
-                    previewVideo.src = videoURL;
-                    
-                    // Listen for metadata to check duration
-                    previewVideo.onloadedmetadata = function() {
-                        // Check if video is under 2 minutes (120 seconds)
-                        if (previewVideo.duration > 120) {
-                            alert('Video must be under 2 minutes long. Please select a shorter video.');
-                            removeVideo();
-                            return;
-                        }
-                        
-                        // Display the duration
-                        videoDuration.textContent = formatDuration(previewVideo.duration);
-                        
-                        // Show the video preview
-                        videoPreview.style.display = 'block';
-                        activeMediaType = 'video';
-                    };
-                    
-                    // Handle video loading errors
-                    previewVideo.onerror = function() {
-                        alert('Error loading the video');
+                // Set the video source
+                previewVideo.src = videoURL;
+                
+                // Listen for metadata to check duration
+                previewVideo.onloadedmetadata = function() {
+                    // Check if video is under 2 minutes (120 seconds)
+                    if (previewVideo.duration > 120) {
+                        alert('Video must be under 2 minutes long. Please select a shorter video.');
                         removeVideo();
-                    };
+                        return;
+                    }
+                    
+                    // Display the duration
+                    videoDuration.textContent = formatDuration(previewVideo.duration);
+                    
+                    // Show the video preview
+                    videoPreview.style.display = 'block';
+                    activeMediaType = 'video';
                 };
                 
-                reader.onerror = function() {
-                    alert('Error reading the video file');
-                    console.error('FileReader error', reader.error);
+                // Handle video loading errors
+                previewVideo.onerror = function(e) {
+                    console.error('Video loading error:', e);
+                    alert('Error loading the video. Please try a different format.');
+                    removeVideo();
                 };
-                
-                reader.readAsArrayBuffer(file);
             }
         }
         
@@ -1116,38 +1105,28 @@
             
             showLoading();
             
-            // For videos, convert blob URL to data URL for storage
+            // For videos, create a thumbnail for the video post
             if (activeMediaType === 'video' && videoData) {
-                // Create a temporary video element for the Blob URL
-                const videoElement = document.createElement('video');
-                videoElement.src = videoData;
-                
-                // Create a canvas to capture a thumbnail
-                const canvas = document.createElement('canvas');
-                canvas.width = 320;
-                canvas.height = 180;
-                
-                // Once video metadata is loaded, capture a thumbnail
-                videoElement.onloadedmetadata = function() {
-                    videoElement.currentTime = 1; // Seek to 1 second
+                try {
+                    // Create a canvas to capture a thumbnail
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 320;
+                    canvas.height = 180;
                     
-                    videoElement.onseeked = function() {
-                        // Draw the video frame to the canvas
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-                        
-                        // Get thumbnail as data URL
-                        const thumbnailData = canvas.toDataURL('image/jpeg');
-                        
-                        // Create post with video reference and thumbnail
-                        createFirebasePost(text, null, videoData, thumbnailData, previewVideo.duration);
-                    };
-                };
-                
-                videoElement.onerror = function() {
-                    // If video thumbnail fails, create post without it
+                    // Draw the video frame to the canvas
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
+                    
+                    // Get thumbnail as data URL
+                    const thumbnailData = canvas.toDataURL('image/jpeg');
+                    
+                    // Create post with video reference and thumbnail
+                    createFirebasePost(text, null, videoData, thumbnailData, previewVideo.duration);
+                } catch (error) {
+                    console.error('Error creating video thumbnail:', error);
+                    // If thumbnail creation fails, create post without it
                     createFirebasePost(text, null, videoData, null, null);
-                };
+                }
             } else {
                 // Create regular post with image or just text
                 createFirebasePost(text, imageData, null, null, null);
