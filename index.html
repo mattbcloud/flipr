@@ -1007,26 +1007,42 @@
         // Handle Video Selection
         function handleVideoSelect(e) {
             const file = e.target.files[0];
-            if (file) {
-                // Validate file is a video
-                if (!file.type.startsWith('video/')) {
-                    alert('Please select a video file');
-                    return;
-                }
-                
-                // Size check (optional, can be adjusted)
-                if (file.size > 50 * 1024 * 1024) { // 50MB limit
-                    alert('Video is too large. Please select a video smaller than 50MB.');
-                    return;
-                }
-                
-                // Clear any existing image if one was selected
-                if (activeMediaType === 'image') {
-                    removeImage();
-                }
-                
-                // Simplified approach: Create URL directly from file
+            if (!file) return;
+            
+            console.log('Selected video file:', file.name, 'Type:', file.type, 'Size:', file.size);
+            
+            // Validate file is a video
+            if (!file.type.startsWith('video/')) {
+                alert('Please select a video file');
+                return;
+            }
+            
+            // Size check
+            if (file.size > 50 * 1024 * 1024) { // 50MB limit
+                alert('Video is too large. Please select a video smaller than 50MB.');
+                return;
+            }
+            
+            // Clear any existing image if one was selected
+            if (activeMediaType === 'image') {
+                removeImage();
+            }
+            
+            // Add support for more common video formats
+            const supportedFormats = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
+            if (!supportedFormats.includes(file.type)) {
+                console.warn('Video format may not be supported by all browsers:', file.type);
+                // We'll still try to load it, but warn the user
+                alert('Note: The selected video format (' + file.type + ') might not be supported in all browsers. If you have issues, try converting to MP4.');
+            }
+            
+            // Create a fallback system for video loading
+            try {
+                // Create URL directly from file
                 const videoURL = URL.createObjectURL(file);
+                
+                // Store the file for later use
+                previewVideo.videoFile = file;
                 
                 // Set the video source
                 previewVideo.src = videoURL;
@@ -1046,14 +1062,40 @@
                     // Show the video preview
                     videoPreview.style.display = 'block';
                     activeMediaType = 'video';
+                    
+                    console.log('Video loaded successfully:', previewVideo.videoWidth + 'x' + previewVideo.videoHeight, 'Duration:', previewVideo.duration);
                 };
                 
                 // Handle video loading errors
                 previewVideo.onerror = function(e) {
-                    console.error('Video loading error:', e);
-                    alert('Error loading the video. Please try a different format.');
+                    console.error('Video loading error:', e, previewVideo.error);
+                    
+                    let errorMessage = 'Error loading the video.';
+                    if (previewVideo.error) {
+                        // Provide more specific error messages based on the error code
+                        switch (previewVideo.error.code) {
+                            case MediaError.MEDIA_ERR_ABORTED:
+                                errorMessage += ' The loading was aborted.';
+                                break;
+                            case MediaError.MEDIA_ERR_NETWORK:
+                                errorMessage += ' Network error occurred.';
+                                break;
+                            case MediaError.MEDIA_ERR_DECODE:
+                                errorMessage += ' The format is not supported or corrupted.';
+                                break;
+                            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                                errorMessage += ' The format is not supported in this browser.';
+                                break;
+                        }
+                    }
+                    
+                    alert(errorMessage + ' Please try converting to MP4 format.');
                     removeVideo();
                 };
+            } catch (err) {
+                console.error('Error creating video URL:', err);
+                alert('Error processing the video. Please try a different file.');
+                removeVideo();
             }
         }
         
@@ -1105,27 +1147,48 @@
             
             showLoading();
             
-            // For videos, create a thumbnail for the video post
+            // For videos, create a thumbnail and prepare video data
             if (activeMediaType === 'video' && videoData) {
                 try {
                     // Create a canvas to capture a thumbnail
                     const canvas = document.createElement('canvas');
-                    canvas.width = 320;
-                    canvas.height = 180;
-                    
-                    // Draw the video frame to the canvas
                     const ctx = canvas.getContext('2d');
-                    ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
                     
-                    // Get thumbnail as data URL
-                    const thumbnailData = canvas.toDataURL('image/jpeg');
+                    // Set appropriate dimensions from the video
+                    const aspectRatio = previewVideo.videoWidth / previewVideo.videoHeight;
+                    canvas.width = 320;
+                    canvas.height = Math.round(canvas.width / aspectRatio);
                     
-                    // Create post with video reference and thumbnail
-                    createFirebasePost(text, null, videoData, thumbnailData, previewVideo.duration);
+                    // Try to draw the video frame to the canvas
+                    try {
+                        ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
+                        var thumbnailData = canvas.toDataURL('image/jpeg', 0.7);
+                    } catch (canvasErr) {
+                        console.error('Canvas draw error:', canvasErr);
+                        var thumbnailData = null;
+                    }
+                    
+                    // If we have the original file, we can use a FileReader to get the data URL
+                    if (previewVideo.videoFile) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            // Use this data URL as the video source
+                            createFirebasePost(text, null, e.target.result, thumbnailData, previewVideo.duration);
+                        };
+                        reader.onerror = function() {
+                            // Fallback to the blob URL if FileReader fails
+                            console.warn('FileReader failed, using blob URL');
+                            createFirebasePost(text, null, videoData, thumbnailData, previewVideo.duration);
+                        };
+                        reader.readAsDataURL(previewVideo.videoFile);
+                    } else {
+                        // Use the blob URL if we don't have the file object
+                        createFirebasePost(text, null, videoData, thumbnailData, previewVideo.duration);
+                    }
                 } catch (error) {
-                    console.error('Error creating video thumbnail:', error);
-                    // If thumbnail creation fails, create post without it
-                    createFirebasePost(text, null, videoData, null, null);
+                    console.error('Error preparing video post:', error);
+                    // If everything fails, create post without video processing
+                    createFirebasePost(text, null, videoData, null, previewVideo.duration || null);
                 }
             } else {
                 // Create regular post with image or just text
