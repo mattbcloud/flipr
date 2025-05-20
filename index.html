@@ -8,6 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
     <style>
         :root {
             --primary-color: #39FF14; /* Neon green */
@@ -706,8 +707,10 @@
         // Firebase References
         const auth = firebase.auth();
         const database = firebase.database();
+        const storage = firebase.storage();
         const postsRef = database.ref('posts');
         const usersRef = database.ref('users');
+        const storageRef = storage.ref();
         
         // Firebase connection status
         const connectedRef = database.ref('.info/connected');
@@ -1036,83 +1039,44 @@
                 removeImage();
             }
             
-            // Check if browser supports this video format
-            if (!isVideoFormatSupported(file.type)) {
-                alert('This video format (' + file.type + ') is not supported by your browser. Please use MP4 format for best compatibility.');
-                console.warn('Browser cannot play this video format:', file.type);
-                return;
-            }
-            
             // Store file for later use
             window.selectedVideoFile = file;
             
-            // Instead of using blob URLs which can be problematic, convert directly to data URL
-            const reader = new FileReader();
+            // Create a blob URL for preview only
+            const videoURL = URL.createObjectURL(file);
+            previewVideo.src = videoURL;
             
-            reader.onload = function(event) {
-                const dataUrl = event.target.result;
+            // Listen for metadata to check duration
+            previewVideo.onloadedmetadata = function() {
+                console.log('Video metadata loaded successfully');
                 
-                // Set the video source to the data URL
-                previewVideo.src = dataUrl;
-                
-                // Listen for metadata to check duration
-                previewVideo.onloadedmetadata = function() {
-                    console.log('Video metadata loaded successfully');
-                    
-                    // Check if video is under 2 minutes (120 seconds)
-                    if (previewVideo.duration > 120) {
-                        alert('Video must be under 2 minutes long. Please select a shorter video.');
-                        removeVideo();
-                        return;
-                    }
-                    
-                    // Display the duration
-                    videoDuration.textContent = formatDuration(previewVideo.duration);
-                    
-                    // Show the video preview
-                    videoPreview.style.display = 'block';
-                    activeMediaType = 'video';
-                    
-                    console.log('Video loaded successfully:', 
-                        previewVideo.videoWidth + 'x' + previewVideo.videoHeight, 
-                        'Duration:', previewVideo.duration,
-                        'Ready state:', previewVideo.readyState);
-                };
-                
-                // Add events for monitoring playback - helpful for debugging
-                previewVideo.oncanplay = function() {
-                    console.log('Video can play');
-                };
-                
-                previewVideo.oncanplaythrough = function() {
-                    console.log('Video can play through');
-                };
-                
-                // Handle video loading errors with detailed information
-                previewVideo.onerror = function(e) {
-                    console.error('Video loading error:', e);
-                    console.error('Video error details:', previewVideo.error);
-                    
-                    let errorMessage = 'Error loading the video.';
-                    if (previewVideo.error) {
-                        errorMessage += ' Error code: ' + previewVideo.error.code;
-                        console.error('Media error code:', previewVideo.error.code);
-                        console.error('Media error message:', previewVideo.error.message);
-                    }
-                    
-                    alert(errorMessage + ' Please use MP4 format for best compatibility.');
+                // Check if video is under 2 minutes (120 seconds)
+                if (previewVideo.duration > 120) {
+                    alert('Video must be under 2 minutes long. Please select a shorter video.');
                     removeVideo();
-                };
+                    return;
+                }
+                
+                // Display the duration
+                videoDuration.textContent = formatDuration(previewVideo.duration);
+                
+                // Show the video preview
+                videoPreview.style.display = 'block';
+                activeMediaType = 'video';
+                
+                console.log('Video loaded successfully for preview');
             };
             
-            reader.onerror = function(e) {
-                console.error('FileReader error:', e, reader.error);
-                alert('Error reading the video file. Please try again with a different file.');
-                removeVideo();
+            // Handle video loading errors with detailed information
+            previewVideo.onerror = function(e) {
+                console.error('Video preview error:', e);
+                alert('This video format might not be supported by your browser for preview. It may still upload successfully.');
+                
+                // Even if preview fails, we'll still allow upload since Firebase Storage handles conversion
+                videoPreview.style.display = 'block';
+                activeMediaType = 'video';
+                videoDuration.textContent = 'Unknown';
             };
-            
-            // Read the file as data URL - this converts the file to a base64 encoded string
-            reader.readAsDataURL(file);
         }
         
         // Remove Selected Image
@@ -1156,9 +1120,9 @@
             
             const text = postTextarea.value.trim();
             
-            // Use a different approach for getting media
+            // Check media type
             let hasImage = activeMediaType === 'image' && previewImg.src && previewImg.src.trim() !== '';
-            let hasVideo = activeMediaType === 'video' && previewVideo.src && previewVideo.src.trim() !== '';
+            let hasVideo = activeMediaType === 'video' && window.selectedVideoFile;
             
             if (!text && !hasImage && !hasVideo) {
                 alert('Please add some text, an image, or a video to your post');
@@ -1176,34 +1140,62 @@
             // For video posts
             if (hasVideo) {
                 try {
-                    // We already have the data URL from the video selection
-                    const videoData = previewVideo.src;
+                    // Create a unique filename for the video
+                    const videoFileName = 'videos/' + currentUser.uid + '/' + Date.now() + '_' + window.selectedVideoFile.name;
                     
-                    // Try to capture a thumbnail
+                    // Get thumbnail
                     let thumbnailData = null;
                     try {
-                        // Create a canvas to capture a thumbnail
                         const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        
-                        // Use appropriate dimensions
                         canvas.width = 320;
                         canvas.height = 180;
+                        const ctx = canvas.getContext('2d');
                         
-                        // Draw the current frame
-                        ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
-                        thumbnailData = canvas.toDataURL('image/jpeg', 0.8);
-                        console.log('Thumbnail captured successfully');
+                        // Only try to draw if the video is ready
+                        if (previewVideo.readyState >= 2) {
+                            ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
+                            thumbnailData = canvas.toDataURL('image/jpeg', 0.8);
+                        }
                     } catch (thumbErr) {
-                        console.error('Error creating thumbnail:', thumbErr);
-                        // Continue without thumbnail
+                        console.warn('Could not create thumbnail:', thumbErr);
                     }
                     
-                    // Create the post with all available data
-                    createFirebasePost(text, null, videoData, thumbnailData, previewVideo.duration || null);
+                    // Upload video to Firebase Storage
+                    const videoRef = storageRef.child(videoFileName);
+                    const uploadTask = videoRef.put(window.selectedVideoFile);
+                    
+                    // Monitor upload progress
+                    uploadTask.on('state_changed', 
+                        // Progress function
+                        (snapshot) => {
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            console.log('Upload progress: ' + progress.toFixed(1) + '%');
+                        },
+                        // Error function
+                        (error) => {
+                            console.error('Upload error:', error);
+                            alert('Error uploading video: ' + error.message);
+                            hideLoading();
+                        },
+                        // Complete function
+                        () => {
+                            // Get the download URL
+                            uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                                console.log('Video uploaded successfully. URL:', downloadURL);
+                                
+                                // Now create post with the video URL
+                                const videoDuration = previewVideo.duration || 0;
+                                createFirebasePost(text, null, downloadURL, thumbnailData, videoDuration);
+                            }).catch(urlError => {
+                                console.error('Error getting download URL:', urlError);
+                                alert('Error completing video upload. Please try again.');
+                                hideLoading();
+                            });
+                        }
+                    );
                 } catch (error) {
-                    console.error('Error creating video post:', error);
-                    alert('Error creating video post. Please try again with a different video.');
+                    console.error('Error uploading video:', error);
+                    alert('Error processing video. Please try again with a different video.');
                     hideLoading();
                 }
                 return;
@@ -1214,7 +1206,7 @@
         }
         
         // Create post in Firebase
-        function createFirebasePost(text, imageData, videoData, videoThumbnail, videoDuration) {
+        function createFirebasePost(text, imageData, videoURL, videoThumbnail, videoDuration) {
             const newPostRef = postsRef.push();
             
             const newPost = {
@@ -1223,7 +1215,7 @@
                 author: currentUser.username,
                 text: text,
                 image: imageData,
-                video: videoData,
+                videoURL: videoURL, // Now using a URL to Firebase Storage instead of embedded video data
                 videoThumbnail: videoThumbnail,
                 videoDuration: videoDuration,
                 timestamp: firebase.database.ServerValue.TIMESTAMP,
@@ -1513,11 +1505,11 @@
             
             // Determine what media content to show
             let mediaContent = '';
-            if (post.video) {
+            if (post.videoURL) {
                 // For video posts
                 const duration = post.videoDuration ? formatDuration(post.videoDuration) : '00:00';
                 mediaContent = `
-                    <video class="post-video" src="${post.video}" controls></video>
+                    <video class="post-video" src="${post.videoURL}" controls></video>
                     <span class="video-duration">${duration}</span>
                 `;
             } else if (post.image && post.image.trim() !== '') {
