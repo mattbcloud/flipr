@@ -736,6 +736,26 @@
         // Current user data
         let currentUser = null;
         
+        // Enhanced error handling for Firebase security rules
+        function handleFirebaseError(error) {
+            console.error('Firebase operation failed:', error);
+            
+            switch (error.code) {
+                case 'PERMISSION_DENIED':
+                    alert('You don\'t have permission to perform this action.');
+                    break;
+                case 'UNAUTHENTICATED':
+                    alert('Please log in to continue.');
+                    showAuthForms();
+                    break;
+                case 'INVALID_DATA':
+                    alert('The data you\'re trying to save is invalid.');
+                    break;
+                default:
+                    alert('An error occurred. Please try again.');
+            }
+        }
+        
         // Show loading spinner
         function showLoading() {
             loadingSpinner.style.display = 'block';
@@ -754,11 +774,7 @@
             signupForm.classList.add('hidden');
         }
         
-        // Show App Interface
-        function showAppInterface() {
-            authForms.classList.add('hidden');
-            appInterface.classList.remove('hidden');
-        }
+        // Show App Interface (moved above, enhanced version)
         
         // Function to get the first initial from a username
         function getInitial(username) {
@@ -873,6 +889,59 @@
                 });
         }
         
+        // Add input validation for the post form
+        function setupInputValidation() {
+            const postTextarea = document.getElementById('post-text');
+            const maxLength = 2000;
+            
+            // Create character counter element
+            const counter = document.createElement('div');
+            counter.id = 'char-counter';
+            counter.style.cssText = `
+                font-size: 0.8rem;
+                color: var(--secondary-text);
+                text-align: right;
+                margin-top: 0.5rem;
+            `;
+            
+            // Insert counter after textarea
+            postTextarea.parentNode.insertBefore(counter, postTextarea.nextSibling);
+            
+            // Update counter and validate on input
+            postTextarea.addEventListener('input', function(e) {
+                const currentLength = e.target.value.length;
+                const remaining = maxLength - currentLength;
+                
+                if (currentLength > maxLength) {
+                    e.target.value = e.target.value.substring(0, maxLength);
+                    alert(`Post text cannot exceed ${maxLength} characters`);
+                    return;
+                }
+                
+                counter.textContent = `${remaining} characters remaining`;
+                
+                if (remaining < 100) {
+                    counter.style.color = 'var(--secondary-color)';
+                } else {
+                    counter.style.color = 'var(--secondary-text)';
+                }
+            });
+            
+            // Initialize counter
+            counter.textContent = `${maxLength} characters remaining`;
+        }
+        
+        // Enhanced app interface setup
+        function showAppInterface() {
+            authForms.classList.add('hidden');
+            appInterface.classList.remove('hidden');
+            
+            // Setup input validation when app interface is shown
+            if (!document.getElementById('char-counter')) {
+                setupInputValidation();
+            }
+        }
+        
         // Signup Function
         function signup() {
             const username = document.getElementById('signup-username').value.trim();
@@ -882,6 +951,18 @@
             
             if (!username || !email || !password || !confirmPassword) {
                 alert('Please fill all fields');
+                return;
+            }
+            
+            // Validate username length (matches Firebase rule)
+            if (username.length > 30) {
+                alert('Username must be 30 characters or less');
+                return;
+            }
+            
+            // Basic email validation (Firebase rules have more strict validation)
+            if (!email.includes('@') || !email.includes('.')) {
+                alert('Please enter a valid email address');
                 return;
             }
             
@@ -903,17 +984,20 @@
                 // Create user with email and password
                 auth.createUserWithEmailAndPassword(email, password)
                     .then((userCredential) => {
-                        // Save additional user data
+                        // Save additional user data (matches Firebase rule requirements)
                         usersRef.child(userCredential.user.uid).set({
-                            username: username,
-                            email: email,
+                            username: username,  // Required by security rules
+                            email: email,        // Required by security rules
                             createdAt: firebase.database.ServerValue.TIMESTAMP
                         });
                     })
                     .catch((error) => {
                         hideLoading();
-                        alert(`Registration failed: ${error.message}`);
+                        handleFirebaseError(error);
                     });
+            }).catch((error) => {
+                hideLoading();
+                handleFirebaseError(error);
             });
         }
         
@@ -1169,18 +1253,30 @@
         
         // Create post in Firebase
         function createFirebasePost(text, imageData, videoURL, videoThumbnail, videoDuration) {
+            // Client-side validation before sending to Firebase
+            if (!currentUser) {
+                alert('You must be logged in to create a post');
+                return;
+            }
+            
+            // Validate text length (matches Firebase rule)
+            if (text && text.length > 2000) {
+                alert('Post text must be 2000 characters or less');
+                return;
+            }
+            
             const newPostRef = postsRef.push();
             
             const newPost = {
                 id: newPostRef.key,
-                authorId: currentUser.uid,
-                author: currentUser.username,
-                text: text,
+                authorId: currentUser.uid,  // Required by security rules
+                author: currentUser.username,  // Required by security rules
+                text: text || '',
                 image: imageData,
                 videoURL: videoURL, // Now using a URL to Firebase Storage instead of embedded video data
                 videoThumbnail: videoThumbnail,
                 videoDuration: videoDuration,
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,  // Required by security rules
                 likes: 0,
                 dislikes: 0
             };
@@ -1206,9 +1302,8 @@
                     hideLoading();
                 })
                 .catch((error) => {
-                    console.error('Error creating post:', error);
-                    alert('There was an error creating your post. Please try again.');
                     hideLoading();
+                    handleFirebaseError(error);
                 });
         }
         
@@ -1688,25 +1783,35 @@
         
         // Handle Post Like
         function handlePostLike(postId) {
-            if (!currentUser) return;
+            if (!currentUser) {
+                alert('Please log in to like posts');
+                return;
+            }
             
             const postRef = postsRef.child(postId);
             
             // Use a transaction to ensure likes are updated atomically
             postRef.child('likes').transaction((currentLikes) => {
                 return (currentLikes || 0) + 1;
+            }).catch((error) => {
+                handleFirebaseError(error);
             });
         }
         
         // Handle Post Dislike
         function handlePostDislike(postId) {
-            if (!currentUser) return;
+            if (!currentUser) {
+                alert('Please log in to dislike posts');
+                return;
+            }
             
             const postRef = postsRef.child(postId);
             
             // Use a transaction to ensure dislikes are updated atomically
             postRef.child('dislikes').transaction((currentDislikes) => {
                 return (currentDislikes || 0) + 1;
+            }).catch((error) => {
+                handleFirebaseError(error);
             });
             
             // Add this post to the recently disliked list
@@ -1806,9 +1911,28 @@
             }
         });
         
+        // Add input validation for comment and reply inputs
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('comment-input') || e.target.classList.contains('reply-input')) {
+                const maxLength = 500;
+                const currentLength = e.target.value.length;
+                
+                if (currentLength > maxLength) {
+                    e.target.value = e.target.value.substring(0, maxLength);
+                    alert(`Comments must be ${maxLength} characters or less`);
+                }
+            }
+        });
+        
         // Add comment to Firebase
         function addComment(postId, commentText) {
             if (!currentUser || !commentText.trim()) return;
+            
+            // Validate comment length (matches Firebase rule)
+            if (commentText.trim().length > 500) {
+                alert('Comments must be 500 characters or less');
+                return;
+            }
             
             showLoading();
             
@@ -1816,10 +1940,10 @@
             const commentRef = postsRef.child(`${postId}/comments`).push();
             
             const newComment = {
-                author: currentUser.username,
-                authorId: currentUser.uid,
-                text: commentText.trim(),
-                timestamp: firebase.database.ServerValue.TIMESTAMP
+                author: currentUser.username,  // Required by security rules
+                authorId: currentUser.uid,     // Required by security rules
+                text: commentText.trim(),      // Required by security rules
+                timestamp: firebase.database.ServerValue.TIMESTAMP  // Required by security rules
             };
             
             commentRef.set(newComment)
@@ -1836,9 +1960,8 @@
                     }, 300);
                 })
                 .catch((error) => {
-                    console.error('Error adding comment:', error);
                     hideLoading();
-                    alert('Error adding comment. Please try again.');
+                    handleFirebaseError(error);
                 });
         }
         
@@ -1846,16 +1969,22 @@
         function addReply(postId, commentId, replyText) {
             if (!currentUser || !replyText.trim()) return;
             
+            // Validate reply length
+            if (replyText.trim().length > 500) {
+                alert('Replies must be 500 characters or less');
+                return;
+            }
+            
             showLoading();
             
             // Create a new reply reference
             const replyRef = postsRef.child(`${postId}/comments/${commentId}/replies`).push();
             
             const newReply = {
-                author: currentUser.username,
-                authorId: currentUser.uid,
-                text: replyText.trim(),
-                timestamp: firebase.database.ServerValue.TIMESTAMP
+                author: currentUser.username,  // Required by security rules
+                authorId: currentUser.uid,     // Required by security rules
+                text: replyText.trim(),        // Required by security rules
+                timestamp: firebase.database.ServerValue.TIMESTAMP  // Required by security rules
             };
             
             replyRef.set(newReply)
@@ -1895,9 +2024,8 @@
                     }
                 })
                 .catch((error) => {
-                    console.error('Error adding reply:', error);
                     hideLoading();
-                    alert('Error adding reply. Please try again.');
+                    handleFirebaseError(error);
                 });
         }
     </script>
