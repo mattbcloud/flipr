@@ -538,27 +538,6 @@
             animation: highlight 2s ease;
         }
         
-        /* Firebase status indicator */
-        .firebase-status {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            z-index: 1000;
-        }
-        
-        .status-connected {
-            background-color: var(--primary-color);
-            color: black;
-        }
-        
-        .status-disconnected {
-            background-color: var(--secondary-color);
-            color: white;
-        }
-        
         .loading-spinner {
             display: none;
             position: fixed;
@@ -582,9 +561,6 @@
 <body>
     <!-- Loading spinner -->
     <div class="loading-spinner" id="loading-spinner"></div>
-    
-    <!-- Firebase Status -->
-    <div class="firebase-status" id="firebase-status"></div>
     
     <!-- Authentication Forms -->
     <div id="auth-forms" class="auth-container">
@@ -711,20 +687,6 @@
         const postsRef = database.ref('posts');
         const usersRef = database.ref('users');
         const storageRef = storage.ref();
-        
-        // Firebase connection status
-        const connectedRef = database.ref('.info/connected');
-        const firebaseStatus = document.getElementById('firebase-status');
-        
-        connectedRef.on('value', (snap) => {
-            if (snap.val() === true) {
-                firebaseStatus.textContent = 'Connected';
-                firebaseStatus.className = 'firebase-status status-connected';
-            } else {
-                firebaseStatus.textContent = 'Disconnected';
-                firebaseStatus.className = 'firebase-status status-disconnected';
-            }
-        });
         
         // DOM Elements
         const authForms = document.getElementById('auth-forms');
