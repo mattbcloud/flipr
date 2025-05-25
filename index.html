@@ -1453,7 +1453,7 @@
         // Render Comments Function
         function renderComments(post) {
             if (!post.comments) {
-                return '<div class="no-comments">No comments yet</div>';
+                return '';
             }
             
             const commentsArray = [];
@@ -1465,7 +1465,7 @@
             }
             
             if (commentsArray.length === 0) {
-                return '<div class="no-comments">No comments yet</div>';
+                return '';
             }
             
             // Sort comments by timestamp (newest last)
