@@ -756,6 +756,37 @@
             }
         }
         
+        // Password strength validation
+        function validatePassword(password) {
+            const errors = [];
+            
+            if (password.length < 8) {
+                errors.push('at least 8 characters');
+            }
+            
+            if (!/[A-Z]/.test(password)) {
+                errors.push('one uppercase letter');
+            }
+            
+            if (!/[a-z]/.test(password)) {
+                errors.push('one lowercase letter');
+            }
+            
+            if (!/\d/.test(password)) {
+                errors.push('one number');
+            }
+            
+            if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+                errors.push('one special character (!@#$%^&*(),.?":{}|<>)');
+            }
+            
+            if (errors.length > 0) {
+                throw new Error('Password must contain ' + errors.join(', '));
+            }
+            
+            return true;
+        }
+        
         // Show loading spinner
         function showLoading() {
             loadingSpinner.style.display = 'block';
@@ -935,6 +966,14 @@
             // Basic email validation (Firebase rules have more strict validation)
             if (!email.includes('@') || !email.includes('.')) {
                 alert('Please enter a valid email address');
+                return;
+            }
+            
+            // Validate password strength
+            try {
+                validatePassword(password);
+            } catch (error) {
+                alert(error.message);
                 return;
             }
             
@@ -1158,8 +1197,14 @@
             // For video posts
             if (hasVideo) {
                 try {
+                    console.log('Starting video upload...');
+                    console.log('File size:', window.selectedVideoFile.size, 'bytes');
+                    console.log('File type:', window.selectedVideoFile.type);
+                    console.log('User ID:', currentUser.uid);
+                    
                     // Create a unique filename for the video
                     const videoFileName = 'videos/' + currentUser.uid + '/' + Date.now() + '_' + window.selectedVideoFile.name;
+                    console.log('Upload path:', videoFileName);
                     
                     // Get thumbnail
                     let thumbnailData = null;
@@ -1191,7 +1236,9 @@
                         },
                         // Error function
                         (error) => {
-                            console.error('Upload error:', error);
+                            console.error('Upload error details:', error);
+                            console.error('Error code:', error.code);
+                            console.error('Error message:', error.message);
                             alert('Error uploading video: ' + error.message);
                             hideLoading();
                         },
