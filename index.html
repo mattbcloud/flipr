@@ -894,41 +894,15 @@
             const postTextarea = document.getElementById('post-text');
             const maxLength = 2000;
             
-            // Create character counter element
-            const counter = document.createElement('div');
-            counter.id = 'char-counter';
-            counter.style.cssText = `
-                font-size: 0.8rem;
-                color: var(--secondary-text);
-                text-align: right;
-                margin-top: 0.5rem;
-            `;
-            
-            // Insert counter after textarea
-            postTextarea.parentNode.insertBefore(counter, postTextarea.nextSibling);
-            
-            // Update counter and validate on input
+            // Validate on input without showing counter
             postTextarea.addEventListener('input', function(e) {
                 const currentLength = e.target.value.length;
-                const remaining = maxLength - currentLength;
                 
                 if (currentLength > maxLength) {
                     e.target.value = e.target.value.substring(0, maxLength);
                     alert(`Post text cannot exceed ${maxLength} characters`);
-                    return;
-                }
-                
-                counter.textContent = `${remaining} characters remaining`;
-                
-                if (remaining < 100) {
-                    counter.style.color = 'var(--secondary-color)';
-                } else {
-                    counter.style.color = 'var(--secondary-text)';
                 }
             });
-            
-            // Initialize counter
-            counter.textContent = `${maxLength} characters remaining`;
         }
         
         // Enhanced app interface setup
@@ -937,9 +911,7 @@
             appInterface.classList.remove('hidden');
             
             // Setup input validation when app interface is shown
-            if (!document.getElementById('char-counter')) {
-                setupInputValidation();
-            }
+            setupInputValidation();
         }
         
         // Signup Function
