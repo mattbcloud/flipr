@@ -1,23 +1,48 @@
-# Settings for Backend (on Cloud Run).
-# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+# Firebase App Hosting Configuration for Flipr
+
+# Build configuration
+buildConfig:
+  runtime: nodejs18
+  # No build commands needed for static HTML
+  
+# Runtime configuration  
 runConfig:
-  minInstances: 0
-  # maxInstances: 100
-  # concurrency: 80
-  # cpu: 1
-  # memoryMiB: 512
+  # Automatically deploy Cloud Functions with the frontend
+  functions:
+    source: functions
+    runtime: nodejs18
+    # Cloud Function will handle auto-delete of posts after 7 days
 
-# Environment variables and secrets.
-# env:
-  # Configure environment variables.
-  # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
-  # - variable: MESSAGE
-  #   value: Hello world!
-  #   availability:
-  #     - BUILD
-  #     - RUNTIME
+# Environment variables
+env:
+  - variable: NODE_ENV
+    value: production
+  - variable: APP_NAME
+    value: Flipr
 
-  # Grant access to secrets in Cloud Secret Manager.
-  # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
-  # - variable: MY_SECRET
-  #   secret: mySecretRef
+# Static file serving configuration
+serve:
+  # Serve index.html as the main app
+  staticFiles:
+    - source: index.html
+      destination: /
+      
+# Headers for security and performance
+headers:
+  - source: "**"
+    headers:
+      - key: "X-Content-Type-Options"
+        value: "nosniff"
+      - key: "X-Frame-Options"
+        value: "DENY"
+      - key: "X-XSS-Protection"
+        value: "1; mode=block"
+      - key: "Cache-Control"
+        value: "public, max-age=3600"
+
+# Single Page Application configuration
+# All routes serve index.html for client-side routing
+redirects:
+  - source: "**"
+    destination: "/index.html"
+    type: 200
