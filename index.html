@@ -61,6 +61,7 @@
             gap: 0.5rem;
         }
 
+        /* New profile picture styles */
         .profile-pic {
             width: 30px;
             height: 30px;
@@ -263,6 +264,39 @@
             border-radius: 4px;
         }
 
+        .post-stats {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .post-actions {
+            display: flex;
+            justify-content: space-around;
+            padding: 0.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .post-action-btn {
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            cursor: pointer;
+            color: var(--secondary-color);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: color 0.2s;
+        }
+        
+        .post-action-btn:hover {
+            color: var(--primary-color);
+        }
+        
         .comments-section {
             padding: 0 1rem 1rem;
             border-top: 1px solid var(--border-color);
@@ -631,8 +665,9 @@
     </div>
 
     <script>
-        // Firebase Configuration - REPLACE WITH YOUR CONFIG
+        // Firebase Configuration
         const firebaseConfig = {
+            // REPLACE WITH YOUR FIREBASE CONFIG
             apiKey: "AIzaSyCq6jnPC__yN158gIq5oBsdzM7-ypnK2aU",
             authDomain: "flipr-a9cbf.firebaseapp.com",
             databaseURL: "https://flipr-a9cbf-default-rtdb.firebaseio.com/",
@@ -652,6 +687,54 @@
         const postsRef = database.ref('posts');
         const usersRef = database.ref('users');
         const storageRef = storage.ref();
+        
+        // DOM Elements
+        const authForms = document.getElementById('auth-forms');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const showSignupLink = document.getElementById('show-signup');
+        const showLoginLink = document.getElementById('show-login');
+        const appInterface = document.getElementById('app-interface');
+        const usernameDisplay = document.getElementById('username-display');
+        const userProfilePic = document.getElementById('user-profile-pic');
+        const logoutBtn = document.getElementById('logout-btn');
+        const postTextarea = document.getElementById('post-text');
+        const imageInput = document.getElementById('image-input');
+        const videoInput = document.getElementById('video-input');
+        const imagePreview = document.getElementById('image-preview');
+        const videoPreview = document.getElementById('video-preview');
+        const previewImg = document.getElementById('preview-img');
+        const previewVideo = document.getElementById('preview-video');
+        const videoDuration = document.getElementById('video-duration');
+        const removeImageBtn = document.getElementById('remove-image');
+        const removeVideoBtn = document.getElementById('remove-video');
+        const submitPostBtn = document.getElementById('submit-post');
+        const postsFeed = document.getElementById('posts-feed');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        
+        // Media type tracking
+        let activeMediaType = null; // 'image', 'video', or null
+        
+        // For video format support testing
+        const testVideoElement = document.createElement('video');
+        
+        // Function to check if a specific video format is supported
+        function isVideoFormatSupported(mimeType) {
+            return testVideoElement.canPlayType(mimeType) !== '';
+        }
+        
+        // Post pagination state
+        let currentPostIndex = 0;
+        let sortedPosts = [];
+        
+        // End of posts flag
+        let isLastPost = false;
+        
+        // Track recently disliked posts to prevent them from showing up again too soon
+        let recentlyDisliked = [];
+        
+        // Current user data
+        let currentUser = null;
         
         // AUTO-DELETE FUNCTIONALITY - Posts expire after 7 days
         
@@ -692,46 +775,6 @@
         
         // Run cleanup every hour to remove expired posts from current session
         setInterval(cleanupExpiredPosts, 60 * 60 * 1000); // 1 hour
-        
-        // DOM Elements
-        const authForms = document.getElementById('auth-forms');
-        const loginForm = document.getElementById('login-form');
-        const signupForm = document.getElementById('signup-form');
-        const showSignupLink = document.getElementById('show-signup');
-        const showLoginLink = document.getElementById('show-login');
-        const appInterface = document.getElementById('app-interface');
-        const usernameDisplay = document.getElementById('username-display');
-        const userProfilePic = document.getElementById('user-profile-pic');
-        const logoutBtn = document.getElementById('logout-btn');
-        const postTextarea = document.getElementById('post-text');
-        const imageInput = document.getElementById('image-input');
-        const videoInput = document.getElementById('video-input');
-        const imagePreview = document.getElementById('image-preview');
-        const videoPreview = document.getElementById('video-preview');
-        const previewImg = document.getElementById('preview-img');
-        const previewVideo = document.getElementById('preview-video');
-        const videoDuration = document.getElementById('video-duration');
-        const removeImageBtn = document.getElementById('remove-image');
-        const removeVideoBtn = document.getElementById('remove-video');
-        const submitPostBtn = document.getElementById('submit-post');
-        const postsFeed = document.getElementById('posts-feed');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        
-        // State variables
-        let activeMediaType = null; // 'image', 'video', or null
-        let currentPostIndex = 0;
-        let sortedPosts = [];
-        let isLastPost = false;
-        let recentlyDisliked = [];
-        let currentUser = null;
-        
-        // For video format support testing
-        const testVideoElement = document.createElement('video');
-        
-        // Function to check if a specific video format is supported
-        function isVideoFormatSupported(mimeType) {
-            return testVideoElement.canPlayType(mimeType) !== '';
-        }
         
         // Enhanced error handling for Firebase security rules
         function handleFirebaseError(error) {
@@ -802,11 +845,28 @@
             signupForm.classList.add('hidden');
         }
         
+        // Show App Interface (moved above, enhanced version)
+        
         // Function to get the first initial from a username
         function getInitial(username) {
             if (!username) return '?';
             return username.charAt(0).toUpperCase();
         }
+        
+        // Auth Event Listeners
+        document.getElementById('login-btn').addEventListener('click', login);
+        document.getElementById('signup-btn').addEventListener('click', signup);
+        showSignupLink.addEventListener('click', () => {
+            loginForm.classList.add('hidden');
+            signupForm.classList.remove('hidden');
+        });
+        
+        showLoginLink.addEventListener('click', () => {
+            signupForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        });
+        
+        logoutBtn.addEventListener('click', logout);
         
         // Format seconds to MM:SS
         function formatDuration(seconds) {
@@ -1004,6 +1064,308 @@
                 });
         }
         
+        // Post Creation Event Listeners
+        imageInput.addEventListener('change', handleImageSelect);
+        videoInput.addEventListener('change', handleVideoSelect);
+        removeImageBtn.addEventListener('click', removeImage);
+        removeVideoBtn.addEventListener('click', removeVideo);
+        submitPostBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            createPost();
+        });
+        
+        // Handle Image Selection
+        function handleImageSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file is an image
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file');
+                    return;
+                }
+                
+                // Size check (optional, can be adjusted)
+                if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                    alert('Image is too large. Please select an image smaller than 5MB.');
+                    return;
+                }
+                
+                // Clear any existing video if one was selected
+                if (activeMediaType === 'video') {
+                    removeVideo();
+                }
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(event) {
+                    previewImg.src = event.target.result;
+                    imagePreview.style.display = 'block';
+                    activeMediaType = 'image';
+                };
+                
+                reader.onerror = function() {
+                    alert('Error reading the image file');
+                    console.error('FileReader error', reader.error);
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        // Handle Video Selection
+        function handleVideoSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            console.log('Selected video file:', file.name, 'Type:', file.type, 'Size:', file.size);
+            
+            // Validate file is a video
+            if (!file.type.startsWith('video/')) {
+                alert('Please select a video file');
+                return;
+            }
+            
+            // Size check
+            if (file.size > 50 * 1024 * 1024) { // 50MB limit
+                alert('Video is too large. Please select a video smaller than 50MB.');
+                return;
+            }
+            
+            // Clear any existing image if one was selected
+            if (activeMediaType === 'image') {
+                removeImage();
+            }
+            
+            // Store file for later use
+            window.selectedVideoFile = file;
+            
+            // Create a blob URL for preview only
+            const videoURL = URL.createObjectURL(file);
+            previewVideo.src = videoURL;
+            
+            // Listen for metadata to check duration
+            previewVideo.onloadedmetadata = function() {
+                console.log('Video metadata loaded successfully');
+                
+                // Check if video is under 2 minutes (120 seconds)
+                if (previewVideo.duration > 120) {
+                    alert('Video must be under 2 minutes long. Please select a shorter video.');
+                    removeVideo();
+                    return;
+                }
+                
+                // Display the duration
+                videoDuration.textContent = formatDuration(previewVideo.duration);
+                
+                // Show the video preview
+                videoPreview.style.display = 'block';
+                activeMediaType = 'video';
+                
+                console.log('Video loaded successfully for preview');
+            };
+            
+            // Handle video loading errors with detailed information
+            previewVideo.onerror = function(e) {
+                console.error('Video preview error:', e);
+                alert('This video format might not be supported by your browser for preview. It may still upload successfully.');
+                
+                // Even if preview fails, we'll still allow upload since Firebase Storage handles conversion
+                videoPreview.style.display = 'block';
+                activeMediaType = 'video';
+                videoDuration.textContent = 'Unknown';
+            };
+        }
+        
+        // Remove Selected Image
+        function removeImage() {
+            imageInput.value = '';
+            if (previewImg.src) {
+                URL.revokeObjectURL(previewImg.src);
+                previewImg.src = '';
+            }
+            imagePreview.style.display = 'none';
+            activeMediaType = null;
+        }
+        
+        // Remove Selected Video
+        function removeVideo() {
+            videoInput.value = '';
+            if (previewVideo.src) {
+                previewVideo.pause();
+                previewVideo.removeAttribute('src'); // Properly remove the source
+                previewVideo.load(); // Reset the video element
+                
+                // If we used a blob URL, revoke it to prevent memory leaks
+                if (previewVideo.src && previewVideo.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(previewVideo.src);
+                }
+                
+                // Clear any stored references
+                window.selectedVideoFile = null;
+            }
+            videoPreview.style.display = 'none';
+            videoDuration.textContent = '00:00';
+            activeMediaType = null;
+        }
+        
+        // Create New Post
+        function createPost() {
+            if (!currentUser) {
+                alert('You must be logged in to create a post');
+                return;
+            }
+            
+            const text = postTextarea.value.trim();
+            
+            // Check media type
+            let hasImage = activeMediaType === 'image' && previewImg.src && previewImg.src.trim() !== '';
+            let hasVideo = activeMediaType === 'video' && window.selectedVideoFile;
+            
+            if (!text && !hasImage && !hasVideo) {
+                alert('Please add some text, an image, or a video to your post');
+                return;
+            }
+            
+            showLoading();
+            
+            // For image posts
+            if (hasImage) {
+                createFirebasePost(text, previewImg.src, null, null, null);
+                return;
+            }
+            
+            // For video posts
+            if (hasVideo) {
+                try {
+                    console.log('Starting video upload...');
+                    console.log('File size:', window.selectedVideoFile.size, 'bytes');
+                    console.log('File type:', window.selectedVideoFile.type);
+                    console.log('User ID:', currentUser.uid);
+                    
+                    // Create a unique filename for the video
+                    const videoFileName = 'videos/' + currentUser.uid + '/' + Date.now() + '_' + window.selectedVideoFile.name;
+                    console.log('Upload path:', videoFileName);
+                    
+                    // Get thumbnail
+                    let thumbnailData = null;
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 320;
+                        canvas.height = 180;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Only try to draw if the video is ready
+                        if (previewVideo.readyState >= 2) {
+                            ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
+                            thumbnailData = canvas.toDataURL('image/jpeg', 0.8);
+                        }
+                    } catch (thumbErr) {
+                        console.warn('Could not create thumbnail:', thumbErr);
+                    }
+                    
+                    // Upload video to Firebase Storage
+                    const videoRef = storageRef.child(videoFileName);
+                    const uploadTask = videoRef.put(window.selectedVideoFile);
+                    
+                    // Monitor upload progress
+                    uploadTask.on('state_changed', 
+                        // Progress function
+                        (snapshot) => {
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            console.log('Upload progress: ' + progress.toFixed(1) + '%');
+                        },
+                        // Error function
+                        (error) => {
+                            console.error('Upload error details:', error);
+                            console.error('Error code:', error.code);
+                            console.error('Error message:', error.message);
+                            alert('Error uploading video: ' + error.message);
+                            hideLoading();
+                        },
+                        // Complete function
+                        () => {
+                            // Get the download URL
+                            uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                                console.log('Video uploaded successfully. URL:', downloadURL);
+                                
+                                // Now create post with the video URL
+                                const videoDuration = previewVideo.duration || 0;
+                                createFirebasePost(text, null, downloadURL, thumbnailData, videoDuration);
+                            }).catch(urlError => {
+                                console.error('Error getting download URL:', urlError);
+                                alert('Error completing video upload. Please try again.');
+                                hideLoading();
+                            });
+                        }
+                    );
+                } catch (error) {
+                    console.error('Error uploading video:', error);
+                    alert('Error processing video. Please try again with a different video.');
+                    hideLoading();
+                }
+                return;
+            }
+            
+            // Just text post
+            createFirebasePost(text, null, null, null, null);
+        }
+        
+        // Create post in Firebase
+        function createFirebasePost(text, imageData, videoURL, videoThumbnail, videoDuration) {
+            // Client-side validation before sending to Firebase
+            if (!currentUser) {
+                alert('You must be logged in to create a post');
+                return;
+            }
+            
+            // Validate text length (matches Firebase rule)
+            if (text && text.length > 2000) {
+                alert('Post text must be 2000 characters or less');
+                return;
+            }
+            
+            const newPostRef = postsRef.push();
+            
+            const newPost = {
+                id: newPostRef.key,
+                authorId: currentUser.uid,  // Required by security rules
+                author: currentUser.username,  // Required by security rules
+                text: text || '',
+                image: imageData,
+                videoURL: videoURL, // Now using a URL to Firebase Storage instead of embedded video data
+                videoThumbnail: videoThumbnail,
+                videoDuration: videoDuration,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,  // Required by security rules
+                likes: 0,
+                dislikes: 0
+            };
+            
+            newPostRef.set(newPost)
+                .then(() => {
+                    // Reset form
+                    postTextarea.value = '';
+                    removeImage();
+                    removeVideo();
+                    
+                    // Create a client-side copy of the post with current timestamp
+                    const clientPost = {...newPost};
+                    clientPost.timestamp = Date.now(); // Use current time since Firebase.ServerValue.TIMESTAMP can't be used client-side
+                    
+                    // Add to beginning of posts array
+                    sortedPosts.unshift(clientPost);
+                    
+                    // Set currentPostIndex to 0 to show the new post
+                    currentPostIndex = 0;
+                    showCurrentPost();
+                    
+                    hideLoading();
+                })
+                .catch((error) => {
+                    hideLoading();
+                    handleFirebaseError(error);
+                });
+        }
+        
         // Load Posts (UPDATED with auto-delete filtering)
         function loadPosts() {
             showLoading();
@@ -1165,6 +1527,103 @@
             return true;
         }
         
+        // Render Comments Function
+        function renderComments(post) {
+            if (!post.comments) {
+                return '';
+            }
+            
+            const commentsArray = [];
+            for (const commentId in post.comments) {
+                commentsArray.push({
+                    id: commentId,
+                    ...post.comments[commentId]
+                });
+            }
+            
+            if (commentsArray.length === 0) {
+                return '';
+            }
+            
+            // Sort comments by timestamp (newest last)
+            commentsArray.sort((a, b) => a.timestamp - b.timestamp);
+            
+            return commentsArray.map(comment => {
+                const commentDate = new Date(comment.timestamp);
+                const timeAgo = getTimeAgo(commentDate);
+                
+                let repliesHtml = '';
+                
+                // Process replies if they exist
+                if (comment.replies) {
+                    const repliesArray = [];
+                    for (const replyId in comment.replies) {
+                        repliesArray.push({
+                            id: replyId,
+                            ...comment.replies[replyId]
+                        });
+                    }
+                    
+                    if (repliesArray.length > 0) {
+                        // Sort replies by timestamp
+                        repliesArray.sort((a, b) => a.timestamp - b.timestamp);
+                        
+                        repliesHtml = `
+                            <div class="thread-toggle" data-comment-id="${comment.id}">
+                                <span class="thread-toggle-icon">▶</span>
+                                <span>Show ${repliesArray.length} ${repliesArray.length === 1 ? 'reply' : 'replies'}</span>
+                            </div>
+                            <div class="thread-replies" id="replies-${comment.id}">
+                                ${repliesArray.map(reply => {
+                                    const replyDate = new Date(reply.timestamp);
+                                    const replyTimeAgo = getTimeAgo(replyDate);
+                                    
+                                    return `
+                                        <div class="comment" data-reply-id="${reply.id}">
+                                            <div class="comment-header">
+                                                <span class="comment-author">${reply.author}</span>
+                                                <span class="comment-time">${replyTimeAgo}</span>
+                                            </div>
+                                            <div class="comment-text">${reply.text}</div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                                <div class="reply-form">
+                                    <input type="text" class="reply-input" placeholder="Add a reply...">
+                                    <button class="add-reply-btn" data-post-id="${post.id}" data-comment-id="${comment.id}">Reply</button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        repliesHtml = `
+                            <div class="reply-form">
+                                <input type="text" class="reply-input" placeholder="Add a reply...">
+                                <button class="add-reply-btn" data-post-id="${post.id}" data-comment-id="${comment.id}">Reply</button>
+                            </div>
+                        `;
+                    }
+                } else {
+                    repliesHtml = `
+                        <div class="reply-form">
+                            <input type="text" class="reply-input" placeholder="Add a reply...">
+                            <button class="add-reply-btn" data-post-id="${post.id}" data-comment-id="${comment.id}">Reply</button>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="comment" data-comment-id="${comment.id}">
+                        <div class="comment-header">
+                            <span class="comment-author">${comment.author}</span>
+                            <span class="comment-time">${timeAgo}</span>
+                        </div>
+                        <div class="comment-text">${comment.text}</div>
+                        ${repliesHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+        
         // Create Post Element
         function createPostElement(post) {
             const postCard = document.createElement('div');
@@ -1217,10 +1676,226 @@
                 <div class="swipe-overlay dislike-overlay"></div>
             `;
             
-            // Add swipe functionality (touch and mouse events)
-            // [Include the complete swipe handling code from your original app]
+            // Add swipe functionality
+            let startX = 0;
+            let currentX = 0;
+            let isSwiping = false;
+            const swipeThreshold = 10; // Pixels to move before considering it a swipe
+            let swipeProcessed = false; // Flag to prevent duplicate processing
+            
+            // Touch event handling
+            postCard.addEventListener('touchstart', function(e) {
+                startX = e.touches[0].clientX;
+                currentX = startX; 
+                isSwiping = false;
+                swipeProcessed = false;
+                this.style.transition = 'none';
+            });
+            
+            postCard.addEventListener('touchmove', function(e) {
+                if (swipeProcessed) return;
+                
+                currentX = e.touches[0].clientX;
+                const diffX = currentX - startX;
+                
+                // Check if user has moved enough to be considered a swipe
+                if (!isSwiping && Math.abs(diffX) >= swipeThreshold) {
+                    isSwiping = true;
+                }
+                
+                // Only proceed with swipe behavior if we're in swipe mode
+                if (isSwiping) {
+                    // Limit the swipe distance
+                    const limitedDiff = Math.max(Math.min(diffX, 150), -150);
+                    
+                    this.style.transform = `translateX(${limitedDiff}px)`;
+                    
+                    // Show overlay based on swipe direction
+                    if (diffX > 0) {
+                        this.querySelector('.like-overlay').style.opacity = limitedDiff / 150;
+                        this.querySelector('.dislike-overlay').style.opacity = 0;
+                    } else if (diffX < 0) {
+                        this.querySelector('.dislike-overlay').style.opacity = Math.abs(limitedDiff) / 150;
+                        this.querySelector('.like-overlay').style.opacity = 0;
+                    }
+                }
+            });
+            
+            postCard.addEventListener('touchend', function(e) {
+                if (swipeProcessed) return;
+                
+                const diffX = currentX - startX;
+                this.style.transition = 'transform 0.3s ease';
+                
+                // Only process swipe if we were actually swiping
+                if (isSwiping) {
+                    // Handle significant swipe
+                    if (Math.abs(diffX) > 80) {
+                        swipeProcessed = true;
+                        
+                        // Animate the swipe out
+                        const direction = diffX > 0 ? 1 : -1;
+                        this.style.transform = `translateX(${direction * window.innerWidth}px)`;
+                        
+                        setTimeout(() => {
+                            // Reset overlays
+                            this.querySelector('.like-overlay').style.opacity = 0;
+                            this.querySelector('.dislike-overlay').style.opacity = 0;
+                            
+                            // Process the like/dislike
+                            if (diffX > 80) {
+                                handlePostLike(post.id);
+                            } else if (diffX < -80) {
+                                handlePostDislike(post.id);
+                            }
+                            
+                            // After like/dislike is processed, go to next post
+                            goToNextPost();
+                        }, 300); // Wait for animation to complete
+                    } else {
+                        // Reset if not a significant swipe
+                        this.style.transform = 'translateX(0)';
+                        
+                        // Reset overlays
+                        this.querySelector('.like-overlay').style.opacity = 0;
+                        this.querySelector('.dislike-overlay').style.opacity = 0;
+                    }
+                } else {
+                    // It was just a tap, not a swipe
+                    this.style.transform = 'translateX(0)';
+                }
+            });
+            
+            // For desktop testing - mouse events
+            postCard.addEventListener('mousedown', function(e) {
+                startX = e.clientX;
+                currentX = startX;
+                isSwiping = false;
+                swipeProcessed = false;
+                this.style.transition = 'none';
+                
+                const handleMouseMove = (e) => {
+                    if (swipeProcessed) return;
+                    
+                    currentX = e.clientX;
+                    const diffX = currentX - startX;
+                    
+                    // Check if user has moved enough to be considered a swipe
+                    if (!isSwiping && Math.abs(diffX) >= swipeThreshold) {
+                        isSwiping = true;
+                    }
+                    
+                    // Only proceed with swipe behavior if we're in swipe mode
+                    if (isSwiping) {
+                        // Limit the swipe distance
+                        const limitedDiff = Math.max(Math.min(diffX, 150), -150);
+                        
+                        this.style.transform = `translateX(${limitedDiff}px)`;
+                        
+                        // Show overlay based on swipe direction
+                        if (diffX > 0) {
+                            this.querySelector('.like-overlay').style.opacity = limitedDiff / 150;
+                            this.querySelector('.dislike-overlay').style.opacity = 0;
+                        } else if (diffX < 0) {
+                            this.querySelector('.dislike-overlay').style.opacity = Math.abs(limitedDiff) / 150;
+                            this.querySelector('.like-overlay').style.opacity = 0;
+                        }
+                    }
+                };
+                
+                const handleMouseUp = (e) => {
+                    document.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseup', handleMouseUp);
+                    
+                    if (swipeProcessed) return;
+                    
+                    const diffX = currentX - startX;
+                    this.style.transition = 'transform 0.3s ease';
+                    
+                    // Only process swipe if we were actually swiping
+                    if (isSwiping) {
+                        // Handle significant swipe
+                        if (Math.abs(diffX) > 80) {
+                            swipeProcessed = true;
+                            
+                            // Animate the swipe out
+                            const direction = diffX > 0 ? 1 : -1;
+                            this.style.transform = `translateX(${direction * window.innerWidth}px)`;
+                            
+                            setTimeout(() => {
+                                // Reset overlays
+                                this.querySelector('.like-overlay').style.opacity = 0;
+                                this.querySelector('.dislike-overlay').style.opacity = 0;
+                                
+                                // Process the like/dislike
+                                if (diffX > 80) {
+                                    handlePostLike(post.id);
+                                } else if (diffX < -80) {
+                                    handlePostDislike(post.id);
+                                }
+                                
+                                // After like/dislike is processed, go to next post
+                                goToNextPost();
+                            }, 300); // Wait for animation to complete
+                        } else {
+                            // Reset if not a significant swipe
+                            this.style.transform = 'translateX(0)';
+                            
+                            // Reset overlays
+                            this.querySelector('.like-overlay').style.opacity = 0;
+                            this.querySelector('.dislike-overlay').style.opacity = 0;
+                        }
+                    } else {
+                        // It was just a click, not a swipe
+                        this.style.transform = 'translateX(0)';
+                    }
+                };
+                
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+            });
             
             return postCard;
+        }
+        
+        // Handle Post Like
+        function handlePostLike(postId) {
+            if (!currentUser) {
+                alert('Please log in to like posts');
+                return;
+            }
+            
+            const postRef = postsRef.child(postId);
+            
+            // Use a transaction to ensure likes are updated atomically
+            postRef.child('likes').transaction((currentLikes) => {
+                return (currentLikes || 0) + 1;
+            }).catch((error) => {
+                handleFirebaseError(error);
+            });
+        }
+        
+        // Handle Post Dislike
+        function handlePostDislike(postId) {
+            if (!currentUser) {
+                alert('Please log in to dislike posts');
+                return;
+            }
+            
+            const postRef = postsRef.child(postId);
+            
+            // Use a transaction to ensure dislikes are updated atomically
+            postRef.child('dislikes').transaction((currentDislikes) => {
+                return (currentDislikes || 0) + 1;
+            }).catch((error) => {
+                handleFirebaseError(error);
+            });
+            
+            // Add this post to the recently disliked list
+            recentlyDisliked.push(postId);
+            if (recentlyDisliked.length > 5) {
+                recentlyDisliked.shift(); // Remove oldest disliked post
+            }
         }
         
         // Helper function to format time
@@ -1255,60 +1930,181 @@
             return seconds < 10 ? 'just now' : `${seconds} seconds ago`;
         }
         
-        // Render Comments Function
-        function renderComments(post) {
-            if (!post.comments) {
-                return '';
-            }
-            
-            const commentsArray = [];
-            for (const commentId in post.comments) {
-                commentsArray.push({
-                    id: commentId,
-                    ...post.comments[commentId]
-                });
-            }
-            
-            if (commentsArray.length === 0) {
-                return '';
-            }
-            
-            // Sort comments by timestamp (newest last)
-            commentsArray.sort((a, b) => a.timestamp - b.timestamp);
-            
-            return commentsArray.map(comment => {
-                const commentDate = new Date(comment.timestamp);
-                const timeAgo = getTimeAgo(commentDate);
+        // Event delegation for dynamic elements
+        document.addEventListener('click', function(e) {
+            // Add comment button clicked
+            if (e.target.closest('.add-comment-btn')) {
+                const button = e.target.closest('.add-comment-btn');
+                const postId = button.getAttribute('data-post-id');
+                const form = button.closest('.comment-form');
+                const input = form ? form.querySelector('input') : null;
                 
-                return `
-                    <div class="comment" data-comment-id="${comment.id}">
-                        <div class="comment-header">
-                            <span class="comment-author">${comment.author}</span>
-                            <span class="comment-time">${timeAgo}</span>
-                        </div>
-                        <div class="comment-text">${comment.text}</div>
-                    </div>
-                `;
-            }).join('');
+                if (input && input.value.trim() && currentUser) {
+                    addComment(postId, input.value.trim());
+                    input.value = '';
+                }
+            }
+            
+            // Thread toggle clicked
+            if (e.target.closest('.thread-toggle')) {
+                const toggle = e.target.closest('.thread-toggle');
+                const commentId = toggle.getAttribute('data-comment-id');
+                const repliesContainer = document.getElementById(`replies-${commentId}`);
+                
+                if (repliesContainer) {
+                    repliesContainer.classList.toggle('open');
+                    const icon = toggle.querySelector('.thread-toggle-icon');
+                    
+                    if (icon) {
+                        icon.classList.toggle('open');
+                    }
+                    
+                    // Update toggle text
+                    const text = toggle.querySelector('span:last-child');
+                    if (text) {
+                        const replyCount = repliesContainer.querySelectorAll('.comment[data-reply-id]').length;
+                        
+                        if (repliesContainer.classList.contains('open')) {
+                            text.textContent = `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`;
+                        } else {
+                            text.textContent = `Show ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`;
+                        }
+                    }
+                }
+            }
+            
+            // Add reply button clicked
+            if (e.target.closest('.add-reply-btn')) {
+                const button = e.target.closest('.add-reply-btn');
+                const postId = button.getAttribute('data-post-id');
+                const commentId = button.getAttribute('data-comment-id');
+                const form = button.closest('.reply-form');
+                const input = form ? form.querySelector('input') : null;
+                
+                if (input && input.value.trim() && currentUser) {
+                    addReply(postId, commentId, input.value.trim());
+                    input.value = '';
+                }
+            }
+        });
+        
+        // Add input validation for comment and reply inputs
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('comment-input') || e.target.classList.contains('reply-input')) {
+                const maxLength = 500;
+                const currentLength = e.target.value.length;
+                
+                if (currentLength > maxLength) {
+                    e.target.value = e.target.value.substring(0, maxLength);
+                    alert(`Comments must be ${maxLength} characters or less`);
+                }
+            }
+        });
+        
+        // Add comment to Firebase
+        function addComment(postId, commentText) {
+            if (!currentUser || !commentText.trim()) return;
+            
+            // Validate comment length (matches Firebase rule)
+            if (commentText.trim().length > 500) {
+                alert('Comments must be 500 characters or less');
+                return;
+            }
+            
+            showLoading();
+            
+            // Create a new comment reference
+            const commentRef = postsRef.child(`${postId}/comments`).push();
+            
+            const newComment = {
+                author: currentUser.username,  // Required by security rules
+                authorId: currentUser.uid,     // Required by security rules
+                text: commentText.trim(),      // Required by security rules
+                timestamp: firebase.database.ServerValue.TIMESTAMP  // Required by security rules
+            };
+            
+            commentRef.set(newComment)
+                .then(() => {
+                    hideLoading();
+                    
+                    // Highlight the new comment after it's been added
+                    setTimeout(() => {
+                        const commentElement = document.querySelector(`.comment[data-comment-id="${commentRef.key}"]`);
+                        if (commentElement) {
+                            commentElement.classList.add('new-comment');
+                            commentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }, 300);
+                })
+                .catch((error) => {
+                    hideLoading();
+                    handleFirebaseError(error);
+                });
         }
         
-        // Event Listeners
-        document.getElementById('login-btn').addEventListener('click', login);
-        document.getElementById('signup-btn').addEventListener('click', signup);
-        showSignupLink.addEventListener('click', () => {
-            loginForm.classList.add('hidden');
-            signupForm.classList.remove('hidden');
-        });
-        
-        showLoginLink.addEventListener('click', () => {
-            signupForm.classList.add('hidden');
-            loginForm.classList.remove('hidden');
-        });
-        
-        logoutBtn.addEventListener('click', logout);
-        
-        // [Include remaining event listeners and functions as needed]
-        
+        // Add reply to Firebase
+        function addReply(postId, commentId, replyText) {
+            if (!currentUser || !replyText.trim()) return;
+            
+            // Validate reply length
+            if (replyText.trim().length > 500) {
+                alert('Replies must be 500 characters or less');
+                return;
+            }
+            
+            showLoading();
+            
+            // Create a new reply reference
+            const replyRef = postsRef.child(`${postId}/comments/${commentId}/replies`).push();
+            
+            const newReply = {
+                author: currentUser.username,  // Required by security rules
+                authorId: currentUser.uid,     // Required by security rules
+                text: replyText.trim(),        // Required by security rules
+                timestamp: firebase.database.ServerValue.TIMESTAMP  // Required by security rules
+            };
+            
+            replyRef.set(newReply)
+                .then(() => {
+                    hideLoading();
+                    
+                    // Make sure the replies container is open
+                    const repliesContainer = document.getElementById(`replies-${commentId}`);
+                    if (repliesContainer) {
+                        repliesContainer.classList.add('open');
+                        
+                        // Update the toggle icon and text
+                        const threadToggle = document.querySelector(`.thread-toggle[data-comment-id="${commentId}"]`);
+                        if (threadToggle) {
+                            const icon = threadToggle.querySelector('.thread-toggle-icon');
+                            if (icon) icon.classList.add('open');
+                            
+                            const text = threadToggle.querySelector('span:last-child');
+                            if (text) {
+                                // Count replies after the new one has been added
+                                postsRef.child(`${postId}/comments/${commentId}/replies`).once('value', (snapshot) => {
+                                    const replyCount = snapshot.numChildren();
+                                    text.textContent = `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`;
+                                });
+                            }
+                        }
+                        
+                        // Highlight the new reply after it's been added
+                        setTimeout(() => {
+                            const replyElements = repliesContainer.querySelectorAll('.comment[data-reply-id]');
+                            if (replyElements.length > 0) {
+                                const lastReply = replyElements[replyElements.length - 1];
+                                lastReply.classList.add('new-comment');
+                                lastReply.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }, 300);
+                    }
+                })
+                .catch((error) => {
+                    hideLoading();
+                    handleFirebaseError(error);
+                });
+        }
     </script>
 </body>
 </html>
