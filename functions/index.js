@@ -7,17 +7,15 @@ admin.initializeApp();
 exports.deleteExpiredPosts = functions.pubsub.schedule('0 2 * * *')
   .timeZone('UTC')
   .onRun(async (context) => {
-    console.log('🧹 [App Hosting] Starting automatic cleanup of expired posts...');
+    console.log('🧹 Starting automatic cleanup of expired posts...');
     
     const database = admin.database();
     const storage = admin.storage();
     const bucket = storage.bucket();
     
-    // Posts older than 7 days will be deleted
     const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
     
     try {
-      // Get all posts from the database
       const postsSnapshot = await database.ref('posts').once('value');
       const posts = postsSnapshot.val();
       
@@ -29,12 +27,10 @@ exports.deleteExpiredPosts = functions.pubsub.schedule('0 2 * * *')
       const expiredPosts = [];
       const mediaToDelete = [];
       
-      // Find posts that are older than 7 days
       for (const [postId, post] of Object.entries(posts)) {
         if (post.timestamp && post.timestamp < sevenDaysAgo) {
           expiredPosts.push(postId);
           
-          // If the post has a video, collect the file path for deletion
           if (post.videoURL) {
             try {
               const url = new URL(post.videoURL);
@@ -44,45 +40,33 @@ exports.deleteExpiredPosts = functions.pubsub.schedule('0 2 * * *')
               console.error('❌ Error parsing video URL for post', postId, ':', error);
             }
           }
-          
-          // Note: Images are stored as base64 in the database, so no separate file cleanup needed
         }
       }
       
       console.log(`📊 Found ${expiredPosts.length} expired posts to delete`);
-      console.log(`🎥 Found ${mediaToDelete.length} video files to delete`);
       
       if (expiredPosts.length === 0) {
         console.log('✅ No expired posts found - cleanup complete');
-        return { 
-          message: 'No expired posts to delete', 
-          deletedPosts: 0,
-          deletedMediaFiles: 0
-        };
+        return { message: 'No expired posts to delete', deletedPosts: 0 };
       }
       
-      // Delete posts from the database
       const postDeletePromises = expiredPosts.map(postId => {
         console.log(`🗑️ Deleting post: ${postId}`);
         return database.ref(`posts/${postId}`).remove();
       });
       
-      // Delete video files from Firebase Storage
       const mediaDeletePromises = mediaToDelete.map(filePath => {
         console.log(`🎥 Deleting video file: ${filePath}`);
         return bucket.file(filePath).delete().catch(error => {
           console.error(`❌ Error deleting video file ${filePath}:`, error.message);
-          // Don't fail the entire operation if one file deletion fails
         });
       });
       
-      // Execute all deletions in parallel
       await Promise.all([...postDeletePromises, ...mediaDeletePromises]);
       
-      console.log(`✅ [App Hosting] Cleanup completed successfully!`);
+      console.log(`✅ Cleanup completed successfully!`);
       console.log(`   - Deleted ${expiredPosts.length} expired posts`);
       console.log(`   - Deleted ${mediaToDelete.length} video files`);
-      console.log(`   - Freed up database and storage space`);
       
       return {
         success: true,
@@ -93,10 +77,7 @@ exports.deleteExpiredPosts = functions.pubsub.schedule('0 2 * * *')
       };
       
     } catch (error) {
-      console.error('💥 [App Hosting] Error during automated cleanup:', error);
-      
-      // Log the error but don't throw it - we want the function to complete
-      // so Firebase doesn't retry it immediately
+      console.error('💥 Error during automated cleanup:', error);
       return {
         success: false,
         error: error.message,
