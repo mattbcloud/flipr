@@ -1,48 +1,17 @@
-# Firebase App Hosting Configuration for Flipr
+# Firebase App Hosting Configuration for Static HTML
 
-# Build configuration
+# No build needed for static HTML
 buildConfig:
   runtime: nodejs18
-  # No build commands needed for static HTML
-  
-# Runtime configuration  
+
+# Serve static files directly
 runConfig:
-  # Automatically deploy Cloud Functions with the frontend
+  # Deploy Cloud Functions separately
   functions:
     source: functions
-    runtime: nodejs18
-    # Cloud Function will handle auto-delete of posts after 7 days
-
-# Environment variables
-env:
-  - variable: NODE_ENV
-    value: production
-  - variable: APP_NAME
-    value: Flipr
-
-# Static file serving configuration
-serve:
-  # Serve index.html as the main app
-  staticFiles:
-    - source: index.html
-      destination: /
-      
-# Headers for security and performance
-headers:
-  - source: "**"
-    headers:
-      - key: "X-Content-Type-Options"
-        value: "nosniff"
-      - key: "X-Frame-Options"
-        value: "DENY"
-      - key: "X-XSS-Protection"
-        value: "1; mode=block"
-      - key: "Cache-Control"
-        value: "public, max-age=3600"
-
-# Single Page Application configuration
-# All routes serve index.html for client-side routing
-redirects:
-  - source: "**"
-    destination: "/index.html"
-    type: 200
+    
+# Serve your index.html
+staticAssets:
+  # Serve index.html from root
+  - source: index.html
+    glob: index.html
