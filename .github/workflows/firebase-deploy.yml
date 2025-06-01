@@ -1,0 +1,50 @@
+name: Deploy to Firebase
+
+# Trigger deployment on push to main branch
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Checkout the repository code
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    # Setup Node.js
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    # Install Firebase CLI
+    - name: Install Firebase CLI
+      run: npm install -g firebase-tools
+        
+    # Install Functions dependencies
+    - name: Install Functions Dependencies
+      run: |
+        cd functions
+        npm install
+        
+    # Create Firebase service account file
+    - name: Create Service Account Key File
+      run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}' > $HOME/firebase-key.json
+      
+    # Set Google Application Credentials
+    - name: Set Firebase Credentials
+      run: export GOOGLE_APPLICATION_CREDENTIALS=$HOME/firebase-key.json
+      
+    # Deploy to Firebase
+    - name: Deploy to Firebase
+      run: |
+        export GOOGLE_APPLICATION_CREDENTIALS=$HOME/firebase-key.json
+        firebase deploy --project ${{ secrets.FIREBASE_PROJECT_ID }}
+        
+    # Clean up credentials file
+    - name: Clean up
+      if: always()
+      run: rm -f $HOME/firebase-key.json
