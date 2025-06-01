@@ -567,8 +567,6 @@
         <!-- Login Form -->
         <div id="login-form">
             <h2><span style="color: #39FF14;">F</span><span style="color: #FF10F0;">l</span><span style="color: #39FF14;">i</span><span style="color: #FF10F0;">p</span><span style="color: #39FF14;">r</span></h2>
-            Flipr is the new social media sharing site with none of that toxic baggage!
-            <br><br>
             <div class="form-group">
                 <label for="login-username">Username</label>
                 <input type="text" id="login-username" placeholder="Enter your username">
@@ -1642,8 +1640,12 @@
             // Determine what media content to show
             let mediaContent = '';
             if (post.videoURL) {
-                // For video posts - removed the duration span
-                mediaContent = `<video class="post-video" src="${post.videoURL}" controls></video>`;
+                // For video posts
+                const duration = post.videoDuration ? formatDuration(post.videoDuration) : '00:00';
+                mediaContent = `
+                    <video class="post-video" src="${post.videoURL}" controls></video>
+                    <span class="video-duration">${duration}</span>
+                `;
             } else if (post.image && post.image.trim() !== '') {
                 // For image posts
                 mediaContent = `<img class="post-image" src="${post.image}" alt="">`;
