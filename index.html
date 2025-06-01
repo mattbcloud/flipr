@@ -567,6 +567,9 @@
         <!-- Login Form -->
         <div id="login-form">
             <h2><span style="color: #39FF14;">F</span><span style="color: #FF10F0;">l</span><span style="color: #39FF14;">i</span><span style="color: #FF10F0;">p</span><span style="color: #39FF14;">r</span></h2>
+            <BR><BR>
+                Flipr app is a new social sharing site.
+                <BR><BR>
             <div class="form-group">
                 <label for="login-username">Username</label>
                 <input type="text" id="login-username" placeholder="Enter your username">
@@ -735,46 +738,6 @@
         
         // Current user data
         let currentUser = null;
-        
-        // AUTO-DELETE FUNCTIONALITY - Posts expire after 7 days
-        
-        // Function to check if a post is expired (older than 7 days)
-        function isPostExpired(timestamp) {
-            if (!timestamp) return true; // If no timestamp, assume expired
-            const now = Date.now();
-            const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-            return (now - timestamp) > sevenDaysInMs;
-        }
-        
-        // Function to filter out expired posts
-        function filterValidPosts(posts) {
-            return posts.filter(post => {
-                // If timestamp doesn't exist, assume it's old and filter it out
-                if (!post.timestamp) return false;
-                
-                // Check if post is not expired
-                return !isPostExpired(post.timestamp);
-            });
-        }
-        
-        // Function to clean up expired posts from the current session
-        function cleanupExpiredPosts() {
-            const originalLength = sortedPosts.length;
-            sortedPosts = filterValidPosts(sortedPosts);
-            
-            // If current post was removed, adjust index
-            if (currentPostIndex >= sortedPosts.length) {
-                currentPostIndex = Math.max(0, sortedPosts.length - 1);
-            }
-            
-            // If posts were filtered out, refresh the display
-            if (originalLength !== sortedPosts.length) {
-                showCurrentPost();
-            }
-        }
-        
-        // Run cleanup every hour to remove expired posts from current session
-        setInterval(cleanupExpiredPosts, 60 * 60 * 1000); // 1 hour
         
         // Enhanced error handling for Firebase security rules
         function handleFirebaseError(error) {
@@ -1366,7 +1329,7 @@
                 });
         }
         
-        // Load Posts (UPDATED with auto-delete filtering)
+        // Load Posts
         function loadPosts() {
             showLoading();
             
@@ -1378,11 +1341,7 @@
                 .then((snapshot) => {
                     const postsData = [];
                     snapshot.forEach((childSnapshot) => {
-                        const post = childSnapshot.val();
-                        // Only add posts that are not expired (auto-delete filtering)
-                        if (post && !isPostExpired(post.timestamp)) {
-                            postsData.push(post);
-                        }
+                        postsData.push(childSnapshot.val());
                     });
                     
                     // Reverse to get newest first
@@ -1415,16 +1374,11 @@
                 });
         }
         
-        // Setup real-time listeners for posts (UPDATED with auto-delete filtering)
+        // Setup real-time listeners for posts
         function setupPostListeners() {
             // Listen for new posts
             postsRef.limitToLast(1).on('child_added', (snapshot) => {
                 const newPost = snapshot.val();
-                
-                // Only process if post is not expired (auto-delete filtering)
-                if (!newPost || isPostExpired(newPost.timestamp)) {
-                    return;
-                }
                 
                 // Check if this post is already in our array
                 const existingIndex = sortedPosts.findIndex(p => p.id === newPost.id);
@@ -1450,15 +1404,6 @@
             // Listen for post updates (likes, dislikes, comments)
             postsRef.on('child_changed', (snapshot) => {
                 const updatedPost = snapshot.val();
-                
-                // Only process if post is not expired (auto-delete filtering)
-                if (!updatedPost || isPostExpired(updatedPost.timestamp)) {
-                    // If the currently displayed post is now expired, move to next post
-                    if (sortedPosts[currentPostIndex] && sortedPosts[currentPostIndex].id === updatedPost.id) {
-                        goToNextPost();
-                    }
-                    return;
-                }
                 
                 // Find the post in our array
                 const postIndex = sortedPosts.findIndex(p => p.id === updatedPost.id);
