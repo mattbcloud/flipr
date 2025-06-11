@@ -726,15 +726,13 @@
             return testVideoElement.canPlayType(mimeType) !== '';
         }
         
-        // Post pagination state
-        let currentPostIndex = 0;
-        let sortedPosts = [];
-        
-        // End of posts flag
-        let isLastPost = false;
-        
-        // Track recently disliked posts to prevent them from showing up again too soon
-        let recentlyDisliked = [];
+        // SIMPLIFIED QUEUE-BASED APPROACH: Separate ranking from navigation
+        let allPosts = [];                    // Master array of all posts (always kept sorted)
+        let viewingQueue = [];                // Queue of posts to show user
+        let currentPost = null;               // Currently displayed post
+        let currentCycleIndex = 0;            // Index in current cycle through all posts
+        let recentlyDisliked = new Set();     // Recently disliked posts (temporary filter)
+        let queueVersion = 0;                 // Version number to track queue rebuilds
         
         // Current user data
         let currentUser = null;
@@ -808,8 +806,6 @@
             signupForm.classList.add('hidden');
         }
         
-        // Show App Interface (moved above, enhanced version)
-        
         // Function to get the first initial from a username
         function getInitial(username) {
             if (!username) return '?';
@@ -819,12 +815,14 @@
         // Auth Event Listeners
         document.getElementById('login-btn').addEventListener('click', login);
         document.getElementById('signup-btn').addEventListener('click', signup);
-        showSignupLink.addEventListener('click', () => {
+        showSignupLink.addEventListener('click', (e) => {
+            e.preventDefault();
             loginForm.classList.add('hidden');
             signupForm.classList.remove('hidden');
         });
         
-        showLoginLink.addEventListener('click', () => {
+        showLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
             signupForm.classList.add('hidden');
             loginForm.classList.remove('hidden');
         });
@@ -840,37 +838,51 @@
         
         // Auth state change listener
         auth.onAuthStateChanged((user) => {
-            if (user) {
-                // User is signed in
-                // Get user profile data from database
-                usersRef.child(user.uid).once('value', (snapshot) => {
-                    const userData = snapshot.val();
-                    if (userData) {
-                        currentUser = {
-                            uid: user.uid,
-                            email: user.email,
-                            username: userData.username || 'User'
-                        };
-                        
-                        // Update UI
-                        usernameDisplay.textContent = currentUser.username;
-                        userProfilePic.textContent = getInitial(currentUser.username);
-                        showAppInterface();
-                        loadPosts();
-                    } else {
-                        console.error('User data not found in database');
+            try {
+                console.log('🔐 Auth state changed:', user ? 'logged in' : 'logged out');
+                
+                if (user) {
+                    // User is signed in
+                    // Get user profile data from database
+                    usersRef.child(user.uid).once('value', (snapshot) => {
+                        try {
+                            const userData = snapshot.val();
+                            if (userData) {
+                                currentUser = {
+                                    uid: user.uid,
+                                    email: user.email,
+                                    username: userData.username || 'User'
+                                };
+                                
+                                console.log('👤 Current user set:', currentUser.username);
+                                
+                                // Update UI
+                                usernameDisplay.textContent = currentUser.username;
+                                userProfilePic.textContent = getInitial(currentUser.username);
+                                showAppInterface();
+                                loadPosts();
+                            } else {
+                                console.error('User data not found in database');
+                                logout();
+                            }
+                        } catch (error) {
+                            console.error('Error processing user data:', error);
+                            logout();
+                        }
+                    }).catch(error => {
+                        console.error('Error fetching user data:', error);
                         logout();
-                    }
-                }).catch(error => {
-                    console.error('Error fetching user data:', error);
-                    logout();
-                });
-            } else {
-                // User is signed out
-                currentUser = null;
-                showAuthForms();
+                    });
+                } else {
+                    // User is signed out
+                    currentUser = null;
+                    showAuthForms();
+                }
+                hideLoading();
+            } catch (error) {
+                console.error('Error in auth state change handler:', error);
+                hideLoading();
             }
-            hideLoading();
         });
         
         // Login Function
@@ -1314,12 +1326,18 @@
                     const clientPost = {...newPost};
                     clientPost.timestamp = Date.now(); // Use current time since Firebase.ServerValue.TIMESTAMP can't be used client-side
                     
-                    // Add to beginning of posts array
-                    sortedPosts.unshift(clientPost);
+                    // Add to master posts array and sort
+                    allPosts.unshift(clientPost);
+                    sortAllPosts();
                     
-                    // Set currentPostIndex to 0 to show the new post
-                    currentPostIndex = 0;
-                    showCurrentPost();
+                    // If this is the user's own post, show it immediately
+                    if (newPost.authorId === currentUser.uid) {
+                        currentPost = clientPost;
+                        displayCurrentPost();
+                    } else {
+                        // Refresh queue to include new post
+                        refreshViewingQueue();
+                    }
                     
                     hideLoading();
                 })
@@ -1329,37 +1347,161 @@
                 });
         }
         
-        // Load Posts
+        // NEW: Sort all posts by score (likes - dislikes)
+        function sortAllPosts() {
+            allPosts.sort((a, b) => {
+                const scoreA = (a.likes || 0) - (a.dislikes || 0);
+                const scoreB = (b.likes || 0) - (b.dislikes || 0);
+                return scoreB - scoreA; // Highest score first
+            });
+            
+            console.log('📊 Posts sorted by score:', allPosts.map(p => ({
+                author: p.author,
+                score: (p.likes || 0) - (p.dislikes || 0),
+                id: p.id.substring(0, 8)
+            })));
+        }
+        
+        // NEW: Remove duplicates from posts array
+        function removeDuplicates(posts) {
+            const seen = new Set();
+            return posts.filter(post => {
+                if (seen.has(post.id)) {
+                    console.log('🔍 Removing duplicate post:', post.author, post.id.substring(0, 8));
+                    return false;
+                }
+                seen.add(post.id);
+                return true;
+            });
+        }
+        
+        // SIMPLIFIED: Refresh the viewing queue with top-ranked posts
+        function refreshViewingQueue() {
+            console.log(`🔄 Refreshing viewing queue (v${queueVersion++})...`);
+            
+            if (allPosts.length === 0) {
+                console.log('❌ No posts to add to queue');
+                viewingQueue = [];
+                return;
+            }
+            
+            // If we've gone through all posts, start over
+            if (currentCycleIndex >= allPosts.length) {
+                currentCycleIndex = 0;
+                recentlyDisliked.clear();
+                console.log('🔁 Starting new cycle, cleared recently disliked');
+            }
+            
+            // Simple approach: just get the next batch of posts
+            const batchSize = Math.min(20, allPosts.length); // Increased batch size
+            viewingQueue = [];
+            
+            // First, try to get posts that aren't recently disliked
+            for (let i = 0; i < allPosts.length && viewingQueue.length < batchSize; i++) {
+                const postIndex = (currentCycleIndex + i) % allPosts.length;
+                const post = allPosts[postIndex];
+                
+                if (!recentlyDisliked.has(post.id)) {
+                    viewingQueue.push(post);
+                }
+            }
+            
+            // If we don't have enough posts (because too many are recently disliked), 
+            // just add posts regardless of dislike status
+            if (viewingQueue.length < Math.min(5, allPosts.length)) {
+                console.log('⚠️ Not enough posts after filtering, adding more regardless of dislike status');
+                viewingQueue = [];
+                
+                for (let i = 0; i < batchSize && i < allPosts.length; i++) {
+                    const postIndex = (currentCycleIndex + i) % allPosts.length;
+                    viewingQueue.push(allPosts[postIndex]);
+                }
+            }
+            
+            console.log(`📋 Queue refreshed: ${viewingQueue.length} posts added (batch size: ${batchSize}, cycle index: ${currentCycleIndex})`);
+            
+            // Show which posts are in the queue
+            console.log('📋 Queue contents:', viewingQueue.slice(0, 3).map(p => `${p.author}(${p.id.substring(0, 6)})`));
+        }
+        
+        // SIMPLIFIED: Show next post from queue
+        function showNextPost() {
+            // If queue is empty, refresh it
+            if (viewingQueue.length === 0) {
+                refreshViewingQueue();
+            }
+            
+            // If still no posts after refresh, show message
+            if (viewingQueue.length === 0) {
+                postsFeed.innerHTML = '<div class="post-card"><div class="post-content"><p>No posts available. Be the first to share something!</p></div></div>';
+                currentPost = null;
+                return;
+            }
+            
+            // Get next post from queue
+            currentPost = viewingQueue.shift();
+            
+            // Only increment cycle index if we're actually advancing through posts
+            // Don't increment every time, just when queue gets rebuilt
+            
+            const score = (currentPost.likes || 0) - (currentPost.dislikes || 0);
+            console.log(`👀 Showing post: ${currentPost.author} (score: ${score}, queue: ${viewingQueue.length} remaining, cycle: ${currentCycleIndex}/${allPosts.length})`);
+            
+            displayCurrentPost();
+        }
+        
+        // NEW: Display the current post
+        function displayCurrentPost() {
+            if (!currentPost) {
+                showNextPost();
+                return;
+            }
+            
+            // Make sure feed is visible
+            postsFeed.style.display = 'flex';
+            
+            // Clear the feed and add the post
+            postsFeed.innerHTML = '';
+            const postCard = createPostElement(currentPost);
+            postsFeed.appendChild(postCard);
+        }
+        
+        // SIMPLIFIED: Load Posts with queue-based approach
         function loadPosts() {
+            console.log('🚀 Starting loadPosts function');
             showLoading();
             
-            // Clear current posts
-            sortedPosts = [];
+            // Clear current state and ensure all variables are properly initialized
+            allPosts = [];
+            viewingQueue = [];
+            currentPost = null;
+            currentCycleIndex = 0;
+            recentlyDisliked = new Set();
+            queueVersion = 0;
+            
+            console.log('✅ All variables cleared and initialized');
             
             // Get posts from Firebase
             postsRef.orderByChild('timestamp').limitToLast(50).once('value')
                 .then((snapshot) => {
+                    console.log('📦 Firebase data received');
                     const postsData = [];
                     snapshot.forEach((childSnapshot) => {
                         postsData.push(childSnapshot.val());
                     });
                     
-                    // Reverse to get newest first
-                    postsData.reverse();
+                    // Remove duplicates and reverse to get newest first
+                    allPosts = removeDuplicates(postsData.reverse());
+                    console.log(`📋 Processed ${allPosts.length} posts`);
                     
-                    // Sort posts by likes minus dislikes (highest score first)
-                    sortedPosts = postsData.sort((a, b) => {
-                        const scoreA = a.likes - a.dislikes;
-                        const scoreB = b.likes - b.dislikes;
-                        return scoreB - scoreA;
-                    });
+                    // Sort by score
+                    sortAllPosts();
                     
-                    if (sortedPosts.length > 0) {
-                        currentPostIndex = 0;
-                        showCurrentPost();
+                    if (allPosts.length > 0) {
+                        refreshViewingQueue();
+                        showNextPost();
                     } else {
                         postsFeed.innerHTML = '<div class="post-card"><div class="post-content"><p>No posts yet. Be the first to share something!</p></div></div>';
-                        isLastPost = true;
                     }
                     
                     hideLoading();
@@ -1374,29 +1516,30 @@
                 });
         }
         
-        // Setup real-time listeners for posts
+        // SIMPLIFIED: Setup real-time listeners with queue management
         function setupPostListeners() {
             // Listen for new posts
             postsRef.limitToLast(1).on('child_added', (snapshot) => {
                 const newPost = snapshot.val();
                 
                 // Check if this post is already in our array
-                const existingIndex = sortedPosts.findIndex(p => p.id === newPost.id);
+                const existingIndex = allPosts.findIndex(p => p.id === newPost.id);
                 
                 if (existingIndex === -1) {
-                    // This is a new post that wasn't in our initial load
-                    sortedPosts.unshift(newPost);
+                    console.log('➕ New post added:', newPost.author);
                     
-                    // Re-sort posts
-                    sortedPosts = sortedPosts.sort((a, b) => {
-                        const scoreA = a.likes - a.dislikes;
-                        const scoreB = b.likes - b.dislikes;
-                        return scoreB - scoreA;
-                    });
+                    // Add to master array and re-sort
+                    allPosts.unshift(newPost);
+                    allPosts = removeDuplicates(allPosts);
+                    sortAllPosts();
                     
-                    // If this is from the current user, show it immediately
-                    if (newPost.authorId === currentUser.uid && currentPostIndex === 0) {
-                        showCurrentPost();
+                    // If it's from current user, show immediately by updating queue
+                    if (newPost.authorId === currentUser.uid) {
+                        currentPost = newPost;
+                        displayCurrentPost();
+                    } else {
+                        // Refresh queue to include new post
+                        refreshViewingQueue();
                     }
                 }
             });
@@ -1405,70 +1548,45 @@
             postsRef.on('child_changed', (snapshot) => {
                 const updatedPost = snapshot.val();
                 
-                // Find the post in our array
-                const postIndex = sortedPosts.findIndex(p => p.id === updatedPost.id);
+                // Find and update the post in our master array
+                const postIndex = allPosts.findIndex(p => p.id === updatedPost.id);
                 
                 if (postIndex !== -1) {
-                    // Update the post in our array
-                    sortedPosts[postIndex] = updatedPost;
+                    const oldScore = (allPosts[postIndex].likes || 0) - (allPosts[postIndex].dislikes || 0);
+                    const newScore = (updatedPost.likes || 0) - (updatedPost.dislikes || 0);
                     
-                    // If this is the currently displayed post, update it
-                    if (currentPostIndex === postIndex) {
-                        showCurrentPost();
+                    console.log(`📈 Post updated: ${updatedPost.author} (${oldScore} → ${newScore})`);
+                    
+                    // Update the post data
+                    allPosts[postIndex] = updatedPost;
+                    
+                    // Re-sort if score changed
+                    if (oldScore !== newScore) {
+                        sortAllPosts();
+                        
+                        // Don't refresh queue immediately to avoid disrupting user experience
+                        // Queue will refresh naturally when it empties
+                    }
+                    
+                    // Update display if this is the current post
+                    if (currentPost && currentPost.id === updatedPost.id) {
+                        currentPost = updatedPost;
+                        displayCurrentPost();
                     }
                 }
             });
         }
         
-        // Show current post
-        function showCurrentPost() {
-            if (sortedPosts.length === 0) {
-                postsFeed.innerHTML = '<div class="post-card"><div class="post-content"><p>No posts yet. Be the first to share something!</p></div></div>';
-                return;
-            }
-            
-            // Ensure the current index is valid
-            if (currentPostIndex < 0 || currentPostIndex >= sortedPosts.length) {
-                currentPostIndex = 0;
-            }
-            
-            const post = sortedPosts[currentPostIndex];
-            if (!post) {
-                // Try to recover by showing the first post
-                if (sortedPosts.length > 0) {
-                    currentPostIndex = 0;
-                    showCurrentPost();
-                }
-                return;
-            }
-            
-            // Make sure feed is visible
-            postsFeed.style.display = 'flex';
-            
-            // Clear the feed and add the post
-            postsFeed.innerHTML = '';
-            const postCard = createPostElement(post);
-            postsFeed.appendChild(postCard);
-            
-            // Update last post flag
-            isLastPost = currentPostIndex >= sortedPosts.length - 1;
-        }
-        
-        // Go to next post
+        // UPDATED: goToNextPost using queue system (fixed cycle management)
         function goToNextPost() {
-            // Find the next post that isn't in the recently disliked list
-            let attemptsCount = 0;
-            let nextIndex = (currentPostIndex + 1) % sortedPosts.length;
-            const maxAttempts = sortedPosts.length;
-            
-            // Keep looking for a next post that hasn't been recently disliked
-            while (recentlyDisliked.includes(sortedPosts[nextIndex].id) && attemptsCount < maxAttempts) {
-                nextIndex = (nextIndex + 1) % sortedPosts.length;
-                attemptsCount++;
+            // Update cycle index when queue is about to empty (advance through the array)
+            if (viewingQueue.length <= 1) {
+                // When queue is nearly empty, advance our position in the main array
+                currentCycleIndex = Math.min(currentCycleIndex + 10, allPosts.length);
+                console.log(`🔄 Queue nearly empty, advancing cycle index to ${currentCycleIndex}`);
             }
             
-            currentPostIndex = nextIndex;
-            showCurrentPost();
+            showNextPost();
             return true;
         }
         
@@ -1836,11 +1954,17 @@
                 handleFirebaseError(error);
             });
             
-            // Add this post to the recently disliked list
-            recentlyDisliked.push(postId);
-            if (recentlyDisliked.length > 5) {
-                recentlyDisliked.shift(); // Remove oldest disliked post
+            // Add this post to the recently disliked set (using Set for better performance)
+            recentlyDisliked.add(postId);
+            
+            // Limit recently disliked to prevent too many posts being filtered out
+            if (recentlyDisliked.size > 5) { // Reduced from 8 to 5
+                // Remove oldest entries - convert to array, remove first, convert back
+                const dislikedArray = Array.from(recentlyDisliked);
+                recentlyDisliked.delete(dislikedArray[0]);
             }
+            
+            console.log(`👎 Post disliked, recently disliked count: ${recentlyDisliked.size}`);
         }
         
         // Helper function to format time
@@ -2050,6 +2174,42 @@
                     handleFirebaseError(error);
                 });
         }
+        
+        // DEBUG: Add debugging function to window for testing
+        window.getFeedDebugInfo = function() {
+            const debugInfo = {
+                allPosts: allPosts.length,
+                viewingQueue: viewingQueue.length,
+                currentPost: currentPost ? `${currentPost.author} (${currentPost.id.substring(0, 8)})` : 'none',
+                currentCycleIndex: currentCycleIndex,
+                recentlyDisliked: recentlyDisliked.size,
+                queueVersion: queueVersion,
+                topPosts: allPosts.slice(0, 5).map(p => ({
+                    author: p.author,
+                    score: (p.likes || 0) - (p.dislikes || 0),
+                    id: p.id.substring(0, 8)
+                })),
+                queuePosts: viewingQueue.slice(0, 3).map(p => ({
+                    author: p.author,
+                    score: (p.likes || 0) - (p.dislikes || 0),
+                    id: p.id.substring(0, 8)
+                })),
+                recentlyDislikedIds: Array.from(recentlyDisliked).map(id => id.substring(0, 8))
+            };
+            
+            console.table(debugInfo);
+            return debugInfo;
+        };
+        
+        // Add manual refresh function for testing
+        window.refreshFeed = function() {
+            console.log('🔄 Manual feed refresh triggered');
+            currentCycleIndex = 0;
+            recentlyDisliked.clear();
+            refreshViewingQueue();
+            showNextPost();
+            console.log('✅ Feed refreshed manually');
+        };
     </script>
 </body>
 </html>
