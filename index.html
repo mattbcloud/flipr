@@ -1703,9 +1703,9 @@
             // Determine what media content to show
             let mediaContent = '';
             if (post.videoURL) {
-                // For video posts
+                // For video posts with autoplay
                 mediaContent = `
-                    <video class="post-video" src="${post.videoURL}" controls></video>
+                    <video class="post-video" src="${post.videoURL}" controls autoplay muted loop playsinline></video>
                 `;
             } else if (post.image && post.image.trim() !== '') {
                 // For image posts
