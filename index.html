@@ -629,10 +629,20 @@
         }
 
         .stat-label {
-            font-size: 0.8rem;
+            font-size: 1.3rem;
             color: var(--secondary-text);
-            text-transform: uppercase;
             letter-spacing: 0.5px;
+            font-weight: bold;
+        }
+
+        .alternating-text .green {
+            color: var(--primary-color);
+            text-shadow: 0 0 6px rgba(57, 255, 20, 0.6);
+        }
+
+        .alternating-text .purple {
+            color: var(--secondary-color);
+            text-shadow: 0 0 6px rgba(255, 16, 240, 0.6);
         }
 
         .profile-posts {
@@ -871,7 +881,9 @@
             <div class="profile-stats">
                 <div class="stat">
                     <span class="stat-number" id="user-score">0</span>
-                    <span class="stat-label">Score</span>
+                    <span class="stat-label alternating-text">
+                        <span class="green">F</span><span class="purple">l</span><span class="green">i</span><span class="purple">p</span><span class="green">r</span> <span class="green">s</span><span class="purple">c</span><span class="green">o</span><span class="purple">r</span><span class="green">e</span>
+                    </span>
                 </div>
             </div>
             <div class="profile-posts">
