@@ -70,7 +70,7 @@
             gap: 0.5rem;
         }
 
-        /* New profile picture styles */
+        /* Profile picture styles */
         .profile-pic {
             width: 30px;
             height: 30px;
@@ -82,6 +82,12 @@
             justify-content: center;
             font-weight: bold;
             box-shadow: 0 0 8px rgba(57, 255, 20, 0.7);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .profile-pic:hover {
+            transform: scale(1.1);
         }
 
         .post-profile-pic {
@@ -96,6 +102,12 @@
             font-weight: bold;
             font-size: 1.2rem;
             box-shadow: 0 0 8px rgba(255, 16, 240, 0.7);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .post-profile-pic:hover {
+            transform: scale(1.1);
         }
 
         .user-info button {
@@ -244,6 +256,12 @@
         .post-author {
             font-weight: 600;
             color: var(--secondary-color);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .post-author:hover {
+            color: var(--primary-color);
         }
 
         .post-time {
@@ -358,6 +376,12 @@
             font-weight: 600;
             font-size: 0.9rem;
             color: var(--secondary-color);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .comment-author:hover {
+            color: var(--primary-color);
         }
         
         .comment-time {
@@ -524,6 +548,191 @@
             font-weight: 500;
         }
 
+        /* Profile Modal Styles */
+        .profile-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .profile-content {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(57, 255, 20, 0.3), 0 0 20px rgba(255, 16, 240, 0.2);
+            border: 2px solid var(--primary-color);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .profile-header {
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, rgba(57, 255, 20, 0.1), rgba(255, 16, 240, 0.1));
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            color: var(--background-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 2rem;
+            margin: 0 auto 1rem;
+            box-shadow: 0 0 15px rgba(255, 16, 240, 0.7);
+        }
+
+        .profile-username {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-join-date {
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+        }
+
+        .profile-stats {
+            display: flex;
+            justify-content: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(17, 17, 17, 0.5);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--secondary-text);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .profile-posts {
+            padding: 1rem;
+        }
+
+        .profile-posts-header {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .profile-post-card {
+            background-color: rgba(17, 17, 17, 0.5);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .profile-post-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 16, 240, 0.3);
+        }
+
+        .profile-post-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--secondary-text);
+        }
+
+        .post-thumbnail {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .media-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .profile-post-text {
+            color: var(--text-color);
+            line-height: 1.4;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-post-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8rem;
+            color: var(--secondary-text);
+        }
+
+        .profile-post-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .close-profile {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: var(--secondary-color);
+            font-size: 1.5rem;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .close-profile:hover {
+            background-color: rgba(255, 16, 240, 0.2);
+        }
+
+        .no-posts {
+            text-align: center;
+            color: var(--secondary-text);
+            font-style: italic;
+            padding: 2rem;
+        }
+
         .hidden {
             display: none;
         }
@@ -535,6 +744,25 @@
             
             header h1 {
                 font-size: 1.2rem;
+            }
+
+            .profile-content {
+                width: 95%;
+                max-height: 85vh;
+            }
+
+            .profile-header {
+                padding: 1.5rem;
+            }
+
+            .profile-avatar {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+
+            .profile-stats {
+                padding: 1rem;
             }
         }
         
@@ -615,6 +843,29 @@
             <button class="auth-btn" id="signup-btn">Sign Up</button>
             <div class="auth-toggle">
                 <p>Already have an account? <a href="#" id="show-login">Sign In</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="profile-modal hidden">
+        <div class="profile-content">
+            <button class="close-profile" id="close-profile">×</button>
+            <div class="profile-header">
+                <div class="profile-avatar" id="profile-avatar">A</div>
+                <div class="profile-username" id="profile-username">Username</div>
+                <div class="profile-join-date" id="profile-join-date">Joined January 2024</div>
+            </div>
+            <div class="profile-stats">
+                <div class="stat">
+                    <span class="stat-number" id="user-score">0</span>
+                    <span class="stat-label">Score</span>
+                </div>
+            </div>
+            <div class="profile-posts">
+                <div id="user-posts-container">
+                    <!-- User posts will be loaded here -->
+                </div>
             </div>
         </div>
     </div>
@@ -724,6 +975,15 @@
         const postsFeed = document.getElementById('posts-feed');
         const loadingSpinner = document.getElementById('loading-spinner');
         
+        // Profile Modal Elements
+        const profileModal = document.getElementById('profile-modal');
+        const closeProfileBtn = document.getElementById('close-profile');
+        const profileAvatar = document.getElementById('profile-avatar');
+        const profileUsername = document.getElementById('profile-username');
+        const profileJoinDate = document.getElementById('profile-join-date');
+        const userScore = document.getElementById('user-score');
+        const userPostsContainer = document.getElementById('user-posts-container');
+        
         // Media type tracking
         let activeMediaType = null; // 'image', 'video', or null
         
@@ -820,6 +1080,240 @@
             if (!username) return '?';
             return username.charAt(0).toUpperCase();
         }
+
+        // Profile Modal Functions
+        function showProfile(userId, username) {
+            console.log('👤 Showing profile for:', username, userId);
+            showLoading();
+            
+            // Set basic profile info
+            profileAvatar.textContent = getInitial(username);
+            profileUsername.textContent = username;
+            
+            // Get user data and posts
+            Promise.all([
+                getUserData(userId),
+                getUserPosts(userId)
+            ]).then(([userData, userPosts]) => {
+                displayUserProfile(userData, userPosts);
+                profileModal.classList.remove('hidden');
+                hideLoading();
+            }).catch(error => {
+                console.error('Error loading profile:', error);
+                alert('Error loading profile');
+                hideLoading();
+            });
+        }
+
+        function getUserData(userId) {
+            return usersRef.child(userId).once('value').then(snapshot => {
+                return snapshot.val();
+            });
+        }
+
+        function getUserPosts(userId) {
+            return postsRef.orderByChild('authorId').equalTo(userId).once('value').then(snapshot => {
+                const posts = [];
+                snapshot.forEach(child => {
+                    posts.push(child.val());
+                });
+                return posts.reverse(); // Most recent first
+            });
+        }
+
+        function displayUserProfile(userData, userPosts) {
+            // Set join date
+            if (userData && userData.createdAt) {
+                const joinDate = new Date(userData.createdAt);
+                profileJoinDate.textContent = `Joined ${joinDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+            } else {
+                profileJoinDate.textContent = 'Member since 2024';
+            }
+
+            // Calculate total score
+            let totalScore = 0;
+
+            userPosts.forEach(post => {
+                const likes = post.likes || 0;
+                const dislikes = post.dislikes || 0;
+                totalScore += (likes - dislikes);
+            });
+
+            // Update score
+            userScore.textContent = totalScore;
+
+            // Display posts
+            displayUserPosts(userPosts);
+        }
+
+        function displayUserPosts(posts) {
+            userPostsContainer.innerHTML = '';
+
+            if (posts.length === 0) {
+                userPostsContainer.innerHTML = '<div class="no-posts">No posts yet</div>';
+                return;
+            }
+
+            posts.slice(0, 10).forEach(post => { // Show max 10 posts
+                const postElement = createProfilePostElement(post);
+                userPostsContainer.appendChild(postElement);
+            });
+        }
+
+        function createProfilePostElement(post) {
+            const postElement = document.createElement('div');
+            postElement.className = 'profile-post-card';
+
+            const postDate = new Date(post.timestamp);
+            const timeAgo = getTimeAgo(postDate);
+            
+            const likes = post.likes || 0;
+            const dislikes = post.dislikes || 0;
+            const score = likes - dislikes;
+            const comments = post.comments ? Object.keys(post.comments).length : 0;
+
+            // Truncate text if too long
+            let displayText = post.text || '';
+            if (displayText.length > 150) {
+                displayText = displayText.substring(0, 150) + '...';
+            }
+
+            let mediaIndicator = '';
+            if (post.videoURL) {
+                // For video posts, create a thumbnail on-demand
+                mediaIndicator = `
+                    <div class="media-indicator">
+                        <div style="position: relative; display: inline-block;">
+                            <div class="video-thumbnail-container" data-video-url="${post.videoURL}">
+                                <div class="post-thumbnail" style="background-color: #333; display: flex; align-items: center; justify-content: center; color: var(--primary-color);">
+                                    📹
+                                </div>
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                                           color: white; font-size: 12px; text-shadow: 0 0 4px rgba(0,0,0,0.8);">▶</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (post.image && post.image.trim() !== '') {
+                mediaIndicator = `<div class="media-indicator"><img src="${post.image}" alt="Post thumbnail" class="post-thumbnail"></div>`;
+            }
+
+            postElement.innerHTML = `
+                <div class="profile-post-meta">
+                    <span>${timeAgo}</span>
+                    ${mediaIndicator}
+                </div>
+                <div class="profile-post-text">${displayText}</div>
+                <div class="profile-post-stats">
+                    <div class="profile-post-stat">
+                        <span>👍</span>
+                        <span>${likes}</span>
+                    </div>
+                    <div class="profile-post-stat">
+                        <span>👎</span>
+                        <span>${dislikes}</span>
+                    </div>
+                    <div class="profile-post-stat">
+                        <span>💬</span>
+                        <span>${comments}</span>
+                    </div>
+                    <div class="profile-post-stat">
+                        <span style="color: ${score >= 0 ? 'var(--primary-color)' : 'var(--secondary-color)'}">⚡ ${score}</span>
+                    </div>
+                </div>
+            `;
+
+            // Generate video thumbnail after element is created
+            if (post.videoURL) {
+                setTimeout(() => {
+                    generateVideoThumbnail(post.videoURL, postElement.querySelector('.video-thumbnail-container'));
+                }, 100);
+            }
+
+            return postElement;
+        }
+
+        // Function to generate video thumbnail on-demand
+        function generateVideoThumbnail(videoUrl, container) {
+            if (!container) return;
+            
+            const video = document.createElement('video');
+            video.crossOrigin = 'anonymous';
+            video.muted = true;
+            video.style.display = 'none';
+            
+            video.onloadeddata = function() {
+                try {
+                    // Seek to 1 second in or 10% of duration, whichever is smaller
+                    const seekTime = Math.min(1, video.duration * 0.1);
+                    video.currentTime = seekTime;
+                } catch (error) {
+                    console.warn('Could not seek video for thumbnail:', error);
+                }
+            };
+            
+            video.onseeked = function() {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 40;
+                    canvas.height = 40;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Draw video frame to canvas
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    // Convert to data URL
+                    const thumbnailData = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    // Update the container with the actual thumbnail
+                    const thumbnailElement = container.querySelector('.post-thumbnail');
+                    if (thumbnailElement && thumbnailData !== 'data:,') {
+                        thumbnailElement.style.backgroundImage = `url(${thumbnailData})`;
+                        thumbnailElement.style.backgroundSize = 'cover';
+                        thumbnailElement.style.backgroundPosition = 'center';
+                        thumbnailElement.innerHTML = ''; // Remove the 📹 icon
+                    }
+                } catch (error) {
+                    console.warn('Could not generate video thumbnail:', error);
+                    // Keep the default 📹 icon
+                } finally {
+                    // Clean up
+                    document.body.removeChild(video);
+                }
+            };
+            
+            video.onerror = function() {
+                console.warn('Video failed to load for thumbnail generation');
+                // Keep the default 📹 icon
+                try {
+                    document.body.removeChild(video);
+                } catch (e) {}
+            };
+            
+            // Add to DOM temporarily and load video
+            document.body.appendChild(video);
+            video.src = videoUrl;
+            video.load();
+        }
+
+        function closeProfile() {
+            profileModal.classList.add('hidden');
+        }
+
+        // Profile event listeners
+        closeProfileBtn.addEventListener('click', closeProfile);
+        userProfilePic.addEventListener('click', () => {
+            if (currentUser) {
+                showProfile(currentUser.uid, currentUser.username);
+            }
+        });
+
+        // Close modal when clicking outside
+        profileModal.addEventListener('click', (e) => {
+            if (e.target === profileModal) {
+                closeProfile();
+            }
+        });
         
         // Auth Event Listeners
         document.getElementById('login-btn').addEventListener('click', login);
@@ -1653,7 +2147,7 @@
                                     return `
                                         <div class="comment" data-reply-id="${reply.id}">
                                             <div class="comment-header">
-                                                <span class="comment-author">${reply.author}</span>
+                                                <span class="comment-author" data-user-id="${reply.authorId}">${reply.author}</span>
                                                 <span class="comment-time">${replyTimeAgo}</span>
                                             </div>
                                             <div class="comment-text">${reply.text}</div>
@@ -1686,7 +2180,7 @@
                 return `
                     <div class="comment" data-comment-id="${comment.id}">
                         <div class="comment-header">
-                            <span class="comment-author">${comment.author}</span>
+                            <span class="comment-author" data-user-id="${comment.authorId}">${comment.author}</span>
                             <span class="comment-time">${timeAgo}</span>
                         </div>
                         <div class="comment-text">${comment.text}</div>
@@ -1723,9 +2217,9 @@
             
             postCard.innerHTML = `
                 <div class="post-header">
-                    <div class="post-profile-pic">${authorInitial}</div>
+                    <div class="post-profile-pic" data-user-id="${post.authorId}">${authorInitial}</div>
                     <div>
-                        <div class="post-author">${post.author}</div>
+                        <div class="post-author" data-user-id="${post.authorId}">${post.author}</div>
                         <div class="post-time">${timeAgo}</div>
                     </div>
                 </div>
@@ -2008,6 +2502,18 @@
         
         // Event delegation for dynamic elements
         document.addEventListener('click', function(e) {
+            // Profile click handling
+            if (e.target.closest('[data-user-id]')) {
+                const element = e.target.closest('[data-user-id]');
+                const userId = element.getAttribute('data-user-id');
+                const username = element.textContent.trim();
+                
+                if (userId && username) {
+                    showProfile(userId, username);
+                }
+                return;
+            }
+
             // Add comment button clicked
             if (e.target.closest('.add-comment-btn')) {
                 const button = e.target.closest('.add-comment-btn');
