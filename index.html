@@ -84,10 +84,24 @@
             box-shadow: 0 0 8px rgba(57, 255, 20, 0.7);
             cursor: pointer;
             transition: transform 0.2s;
+            overflow: hidden;
         }
 
         .profile-pic:hover {
             transform: scale(1.1);
+        }
+
+        .profile-pic-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .profile-pic-initial {
+            font-weight: bold;
+            cursor: pointer;
         }
 
         .post-profile-pic {
@@ -104,10 +118,25 @@
             box-shadow: 0 0 8px rgba(255, 16, 240, 0.7);
             cursor: pointer;
             transition: transform 0.2s;
+            overflow: hidden;
         }
 
         .post-profile-pic:hover {
             transform: scale(1.1);
+        }
+
+        .post-profile-pic-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .post-profile-pic-initial {
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
         }
 
         .user-info button {
@@ -595,6 +624,115 @@
             font-size: 2rem;
             margin: 0 auto 1rem;
             box-shadow: 0 0 15px rgba(255, 16, 240, 0.7);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .profile-avatar-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .profile-avatar-initial {
+            font-weight: bold;
+            font-size: 2rem;
+            cursor: pointer;
+        }
+
+        .change-photo-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .change-photo-btn {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 24px;
+            height: 24px;
+            background-color: var(--primary-color);
+            border: 2px solid var(--background-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--background-color);
+            box-shadow: 0 0 8px rgba(57, 255, 20, 0.7);
+            transition: transform 0.2s;
+        }
+
+        .change-photo-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .photo-upload-input {
+            display: none;
+        }
+
+        .photo-preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .photo-preview-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            border: 2px solid var(--primary-color);
+            box-shadow: 0 0 30px rgba(57, 255, 20, 0.3);
+            text-align: center;
+        }
+
+        .photo-preview {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 1rem;
+            border: 2px solid var(--secondary-color);
+            box-shadow: 0 0 15px rgba(255, 16, 240, 0.7);
+        }
+
+        .photo-preview-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .photo-preview-btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .photo-save-btn {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 0 10px rgba(57, 255, 20, 0.7);
+        }
+
+        .photo-cancel-btn {
+            background-color: transparent;
+            color: var(--secondary-color);
+            border: 1px solid var(--secondary-color);
         }
 
         .profile-username {
@@ -874,7 +1012,11 @@
         <div class="profile-content">
             <button class="close-profile" id="close-profile">×</button>
             <div class="profile-header">
-                <div class="profile-avatar" id="profile-avatar">A</div>
+                <div class="change-photo-container">
+                    <div class="profile-avatar" id="profile-avatar">A</div>
+                    <button class="change-photo-btn" id="change-photo-btn" title="Change photo">📷</button>
+                    <input type="file" id="photo-upload-input" class="photo-upload-input" accept="image/*">
+                </div>
                 <div class="profile-username" id="profile-username">Username</div>
                 <div class="profile-join-date" id="profile-join-date">Joined January 2024</div>
             </div>
@@ -890,6 +1032,18 @@
                 <div id="user-posts-container">
                     <!-- User posts will be loaded here -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Preview Modal -->
+    <div id="photo-preview-modal" class="photo-preview-modal hidden">
+        <div class="photo-preview-container">
+            <h3 style="color: var(--primary-color); margin-bottom: 1rem;">Preview Profile Photo</h3>
+            <img id="photo-preview" class="photo-preview" src="" alt="Preview">
+            <div class="photo-preview-actions">
+                <button class="photo-preview-btn photo-save-btn" id="save-photo-btn">Save Photo</button>
+                <button class="photo-preview-btn photo-cancel-btn" id="cancel-photo-btn">Cancel</button>
             </div>
         </div>
     </div>
@@ -1008,6 +1162,20 @@
         const userScore = document.getElementById('user-score');
         const userPostsContainer = document.getElementById('user-posts-container');
         
+        // Photo Upload Elements
+        const changePhotoBtn = document.getElementById('change-photo-btn');
+        const photoUploadInput = document.getElementById('photo-upload-input');
+        const photoPreviewModal = document.getElementById('photo-preview-modal');
+        const photoPreview = document.getElementById('photo-preview');
+        const savePhotoBtn = document.getElementById('save-photo-btn');
+        const cancelPhotoBtn = document.getElementById('cancel-photo-btn');
+        
+        // Photo upload state
+        let selectedPhotoFile = null;
+        
+        // Cache for user profile pictures to avoid repeated Firebase calls
+        const profilePictureCache = new Map();
+        
         // Media type tracking
         let activeMediaType = null; // 'image', 'video', or null
         
@@ -1105,20 +1273,55 @@
             return username.charAt(0).toUpperCase();
         }
 
+        // Function to create profile picture HTML
+        function createProfilePicHTML(user, className = 'profile-pic') {
+            if (user.profilePicture) {
+                return `<img src="${user.profilePicture}" alt="${user.username || ''}" class="${className}-image">`;
+            } else {
+                const initial = getInitial(user.username || user.author || '');
+                return `<div class="${className}-initial">${initial}</div>`;
+            }
+        }
+
+        // Function to update profile picture display
+        function updateProfilePicture(element, user, className = 'profile-pic') {
+            // Add data attributes for profile clicking
+            element.setAttribute('data-user-id', user.uid || user.authorId || '');
+            element.setAttribute('data-username', user.username || user.author || '');
+            
+            if (user.profilePicture) {
+                element.innerHTML = `<img src="${user.profilePicture}" alt="${user.username || ''}" class="${className}-image">`;
+            } else {
+                const initial = getInitial(user.username || user.author || '');
+                element.innerHTML = `<div class="${className}-initial">${initial}</div>`;
+            }
+        }
+
         // Profile Modal Functions
         function showProfile(userId, username) {
             console.log('👤 Showing profile for:', username, userId);
             showLoading();
             
             // Set basic profile info
-            profileAvatar.textContent = getInitial(username);
             profileUsername.textContent = username;
+            
+            // Show/hide change photo button based on whether this is the current user's profile
+            const isOwnProfile = currentUser && userId === currentUser.uid;
+            changePhotoBtn.style.display = isOwnProfile ? 'flex' : 'none';
             
             // Get user data and posts
             Promise.all([
                 getUserData(userId),
                 getUserPosts(userId)
             ]).then(([userData, userPosts]) => {
+                // Update profile avatar
+                const userForDisplay = {
+                    uid: userId,
+                    username: username,
+                    profilePicture: userData ? userData.profilePicture : null
+                };
+                updateProfilePicture(profileAvatar, userForDisplay, 'profile-avatar');
+                
                 displayUserProfile(userData, userPosts);
                 profileModal.classList.remove('hidden');
                 hideLoading();
@@ -1324,6 +1527,196 @@
             profileModal.classList.add('hidden');
         }
 
+        // Photo Upload Functions
+        function handlePhotoSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            // Validate file size (5MB limit)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image is too large. Please select an image smaller than 5MB.');
+                return;
+            }
+
+            selectedPhotoFile = file;
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                photoPreview.src = event.target.result;
+                photoPreviewModal.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function cancelPhotoUpload() {
+            selectedPhotoFile = null;
+            photoUploadInput.value = '';
+            photoPreview.src = '';
+            photoPreviewModal.classList.add('hidden');
+        }
+
+        function saveProfilePhoto() {
+            if (!selectedPhotoFile || !currentUser) {
+                alert('Please select a photo first');
+                return;
+            }
+
+            showLoading();
+
+            // Create unique filename
+            const photoFileName = `profile-pics/${currentUser.uid}/${Date.now()}_profile.jpg`;
+            const photoRef = storageRef.child(photoFileName);
+
+            // Compress and upload image
+            compressImage(selectedPhotoFile, 300, 300, 0.8)
+                .then(compressedFile => {
+                    return photoRef.put(compressedFile);
+                })
+                .then(snapshot => {
+                    return snapshot.ref.getDownloadURL();
+                })
+                .then(downloadURL => {
+                    // Update user profile in database
+                    return usersRef.child(currentUser.uid).update({
+                        profilePicture: downloadURL
+                    }).then(() => downloadURL);
+                })
+                .then((downloadURL) => {
+                    // Update current user object with the download URL
+                    currentUser.profilePicture = downloadURL;
+                    
+                    // Clear cache for current user to ensure fresh data
+                    clearProfileCache(currentUser.uid);
+                    
+                    // Update all profile displays
+                    updateAllProfileDisplays();
+                    
+                    // Close modals
+                    cancelPhotoUpload();
+                    hideLoading();
+                    
+                    alert('Profile photo updated successfully!');
+                })
+                .catch(error => {
+                    console.error('Error uploading profile photo:', error);
+                    hideLoading();
+                    alert('Error uploading photo. Please try again.');
+                });
+        }
+
+        // Image compression function
+        function compressImage(file, maxWidth, maxHeight, quality) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+
+                img.onload = function() {
+                    // Calculate new dimensions
+                    let { width, height } = img;
+                    
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = (height * maxWidth) / width;
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = (width * maxHeight) / height;
+                            height = maxHeight;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    // Draw and compress
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    canvas.toBlob(resolve, 'image/jpeg', quality);
+                };
+
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        // Update all profile picture displays throughout the app
+        function updateAllProfileDisplays() {
+            if (!currentUser) return;
+
+            // Update header profile pic
+            updateProfilePicture(userProfilePic, currentUser, 'profile-pic');
+
+            // Update profile modal avatar
+            updateProfilePicture(profileAvatar, currentUser, 'profile-avatar');
+
+            // Update any visible posts by this user
+            const postElements = document.querySelectorAll(`[data-user-id="${currentUser.uid}"]`);
+            postElements.forEach(element => {
+                if (element.classList.contains('post-profile-pic')) {
+                    updateProfilePicture(element, currentUser, 'post-profile-pic');
+                }
+            });
+            
+            // Clear cache for current user so fresh data is fetched
+            profilePictureCache.delete(currentUser.uid);
+        }
+
+        // Function to fetch and cache author profile pictures
+        function fetchAuthorProfilePicture(authorId, authorUsername, profileElement) {
+            // Set data attributes immediately for clicking
+            profileElement.setAttribute('data-user-id', authorId);
+            profileElement.setAttribute('data-username', authorUsername);
+            
+            // Check cache first
+            if (profilePictureCache.has(authorId)) {
+                const cachedUser = profilePictureCache.get(authorId);
+                updateProfilePicture(profileElement, {...cachedUser, uid: authorId}, 'post-profile-pic');
+                return;
+            }
+
+            // If it's the current user, use current user data
+            if (currentUser && authorId === currentUser.uid) {
+                updateProfilePicture(profileElement, currentUser, 'post-profile-pic');
+                profilePictureCache.set(authorId, currentUser);
+                return;
+            }
+
+            // Fetch from Firebase
+            usersRef.child(authorId).once('value')
+                .then(snapshot => {
+                    const userData = snapshot.val();
+                    const userForDisplay = {
+                        uid: authorId,
+                        username: authorUsername,
+                        profilePicture: userData ? userData.profilePicture : null
+                    };
+                    
+                    // Cache the result
+                    profilePictureCache.set(authorId, userForDisplay);
+                    
+                    // Update the profile picture
+                    updateProfilePicture(profileElement, userForDisplay, 'post-profile-pic');
+                })
+                .catch(error => {
+                    console.error('Error fetching author profile picture:', error);
+                    // Fallback to initial
+                    const fallbackUser = { 
+                        uid: authorId, 
+                        username: authorUsername, 
+                        profilePicture: null 
+                    };
+                    updateProfilePicture(profileElement, fallbackUser, 'post-profile-pic');
+                });
+        }
+
         // Profile event listeners
         closeProfileBtn.addEventListener('click', closeProfile);
         userProfilePic.addEventListener('click', () => {
@@ -1332,10 +1725,25 @@
             }
         });
 
-        // Close modal when clicking outside
+        // Photo upload event listeners
+        changePhotoBtn.addEventListener('click', () => {
+            photoUploadInput.click();
+        });
+
+        photoUploadInput.addEventListener('change', handlePhotoSelect);
+        savePhotoBtn.addEventListener('click', saveProfilePhoto);
+        cancelPhotoBtn.addEventListener('click', cancelPhotoUpload);
+
+        // Close modals when clicking outside
         profileModal.addEventListener('click', (e) => {
             if (e.target === profileModal) {
                 closeProfile();
+            }
+        });
+
+        photoPreviewModal.addEventListener('click', (e) => {
+            if (e.target === photoPreviewModal) {
+                cancelPhotoUpload();
             }
         });
         
@@ -1378,14 +1786,15 @@
                                 currentUser = {
                                     uid: user.uid,
                                     email: user.email,
-                                    username: userData.username || 'User'
+                                    username: userData.username || 'User',
+                                    profilePicture: userData.profilePicture || null
                                 };
                                 
                                 console.log('👤 Current user set:', currentUser.username);
                                 
                                 // Update UI
                                 usernameDisplay.textContent = currentUser.username;
-                                userProfilePic.textContent = getInitial(currentUser.username);
+                                updateProfilePicture(userProfilePic, currentUser, 'profile-pic');
                                 showAppInterface();
                                 loadPosts();
                             } else {
@@ -1541,6 +1950,7 @@
                         usersRef.child(userCredential.user.uid).set({
                             username: username,  // Required by security rules
                             email: email,        // Required by security rules
+                            profilePicture: null, // Initialize profile picture as null
                             createdAt: firebase.database.ServerValue.TIMESTAMP
                         });
                     })
@@ -1832,6 +2242,7 @@
                 id: newPostRef.key,
                 authorId: currentUser.uid,  // Required by security rules
                 author: currentUser.username,  // Required by security rules
+                authorProfilePicture: currentUser.profilePicture || null, // Include profile picture
                 text: text || '',
                 image: imageData,
                 videoURL: videoURL, // Now using a URL to Firebase Storage instead of embedded video data
@@ -2005,6 +2416,8 @@
             currentCycleIndex = 0;
             recentlyDisliked = new Set();
             queueVersion = 0;
+            // Clear profile picture cache when loading posts
+            profilePictureCache.clear();
             
             console.log('✅ All variables cleared and initialized');
             
@@ -2171,7 +2584,7 @@
                                     return `
                                         <div class="comment" data-reply-id="${reply.id}">
                                             <div class="comment-header">
-                                                <span class="comment-author" data-user-id="${reply.authorId}">${reply.author}</span>
+                                                <span class="comment-author" data-user-id="${reply.authorId}" data-username="${reply.author}">${reply.author}</span>
                                                 <span class="comment-time">${replyTimeAgo}</span>
                                             </div>
                                             <div class="comment-text">${reply.text}</div>
@@ -2204,7 +2617,7 @@
                 return `
                     <div class="comment" data-comment-id="${comment.id}">
                         <div class="comment-header">
-                            <span class="comment-author" data-user-id="${comment.authorId}">${comment.author}</span>
+                            <span class="comment-author" data-user-id="${comment.authorId}" data-username="${comment.author}">${comment.author}</span>
                             <span class="comment-time">${timeAgo}</span>
                         </div>
                         <div class="comment-text">${comment.text}</div>
@@ -2224,9 +2637,6 @@
             const postDate = new Date(post.timestamp);
             const timeAgo = getTimeAgo(postDate);
             
-            // Get author's initial for profile pic
-            const authorInitial = getInitial(post.author);
-            
             // Determine what media content to show
             let mediaContent = '';
             if (post.videoURL) {
@@ -2241,9 +2651,9 @@
             
             postCard.innerHTML = `
                 <div class="post-header">
-                    <div class="post-profile-pic" data-user-id="${post.authorId}">${authorInitial}</div>
+                    <div class="post-profile-pic" data-user-id="${post.authorId}" data-username="${post.author}"></div>
                     <div>
-                        <div class="post-author" data-user-id="${post.authorId}">${post.author}</div>
+                        <div class="post-author" data-user-id="${post.authorId}" data-username="${post.author}">${post.author}</div>
                         <div class="post-time">${timeAgo}</div>
                     </div>
                 </div>
@@ -2263,6 +2673,12 @@
                 <div class="swipe-overlay like-overlay"></div>
                 <div class="swipe-overlay dislike-overlay"></div>
             `;
+            
+            // Update the profile picture after creating the element
+            const profilePicElement = postCard.querySelector('.post-profile-pic');
+            
+            // Fetch and update profile picture for this author
+            fetchAuthorProfilePicture(post.authorId, post.author, profilePicElement);
             
             // Add swipe functionality
             let startX = 0;
@@ -2530,7 +2946,12 @@
             if (e.target.closest('[data-user-id]')) {
                 const element = e.target.closest('[data-user-id]');
                 const userId = element.getAttribute('data-user-id');
-                const username = element.textContent.trim();
+                let username = element.getAttribute('data-username');
+                
+                // Fallback to text content if no data-username attribute
+                if (!username) {
+                    username = element.textContent.trim();
+                }
                 
                 if (userId && username) {
                     showProfile(userId, username);
@@ -2743,10 +3164,21 @@
             console.log('🔄 Manual feed refresh triggered');
             currentCycleIndex = 0;
             recentlyDisliked.clear();
+            // Clear profile picture cache to get fresh data
+            profilePictureCache.clear();
             refreshViewingQueue();
             showNextPost();
             console.log('✅ Feed refreshed manually');
         };
+
+        // Clear profile cache when user updates their profile picture
+        function clearProfileCache(userId) {
+            if (userId) {
+                profilePictureCache.delete(userId);
+            } else {
+                profilePictureCache.clear();
+            }
+        }
     </script>
 </body>
 </html>
