@@ -312,6 +312,12 @@
             width: 100%;
             max-height: 400px;
             object-fit: cover;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .post-image:hover {
+            opacity: 0.9;
         }
 
         .post-video {
@@ -894,7 +900,86 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
+        }
+
+        /* Full Screen Image Modal */
+        .fullscreen-image-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            backdrop-filter: blur(5px);
+            cursor: pointer;
+        }
+
+        .fullscreen-image-modal.hidden {
+            display: none !important;
+        }
+
+        .fullscreen-image-container {
+            position: relative;
+            max-width: 95vw;
+            max-height: 95vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .fullscreen-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(57, 255, 20, 0.3), 0 0 20px rgba(255, 16, 240, 0.2);
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .fullscreen-image:hover {
+            opacity: 0.95;
+        }
+
+        .fullscreen-close-btn {
+            position: absolute;
+            top: -50px;
+            right: 0;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 2rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, color 0.2s;
+            z-index: 3001;
+        }
+
+        .fullscreen-close-btn:hover {
+            background-color: rgba(255, 16, 240, 0.2);
+            color: var(--secondary-color);
+        }
+
+        .fullscreen-loading {
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+        /* Prevent broken images from showing */
+        .fullscreen-image[src=""], .fullscreen-image:not([src]) {
+            display: none !important;
         }
 
         @media (max-width: 600px) {
@@ -923,6 +1008,11 @@
 
             .profile-stats {
                 padding: 1rem;
+            }
+
+            .fullscreen-close-btn {
+                top: 10px;
+                right: 10px;
             }
         }
         
@@ -1048,6 +1138,14 @@
         </div>
     </div>
 
+    <!-- Full Screen Image Modal -->
+    <div id="fullscreen-image-modal" class="fullscreen-image-modal hidden">
+        <div class="fullscreen-image-container">
+            <button class="fullscreen-close-btn" id="fullscreen-close-btn" title="Close">×</button>
+            <img id="fullscreen-image" class="fullscreen-image" style="display: none;" alt="">
+        </div>
+    </div>
+
     <!-- Main App Interface (Initially Hidden) -->
     <div id="app-interface" class="hidden">
         <header>
@@ -1170,6 +1268,11 @@
         const savePhotoBtn = document.getElementById('save-photo-btn');
         const cancelPhotoBtn = document.getElementById('cancel-photo-btn');
         
+        // Full Screen Image Modal Elements
+        const fullscreenImageModal = document.getElementById('fullscreen-image-modal');
+        const fullscreenImage = document.getElementById('fullscreen-image');
+        const fullscreenCloseBtn = document.getElementById('fullscreen-close-btn');
+        
         // Photo upload state
         let selectedPhotoFile = null;
         
@@ -1197,6 +1300,18 @@
         
         // Current user data
         let currentUser = null;
+        
+        // Ensure fullscreen modal is properly hidden on startup
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('fullscreen-image-modal');
+            const image = document.getElementById('fullscreen-image');
+            if (modal) modal.classList.add('hidden');
+            if (image) {
+                image.style.display = 'none';
+                image.removeAttribute('src');
+                image.alt = '';
+            }
+        });
         
         // Enhanced error handling for Firebase security rules
         function handleFirebaseError(error) {
@@ -1525,6 +1640,10 @@
 
         function closeProfile() {
             profileModal.classList.add('hidden');
+            // Restore body scrolling if no other modals are open
+            if (fullscreenImageModal.classList.contains('hidden') && photoPreviewModal.classList.contains('hidden')) {
+                document.body.style.overflow = '';
+            }
         }
 
         // Photo Upload Functions
@@ -1717,6 +1836,87 @@
                 });
         }
 
+        // Full Screen Image Functions
+        function showFullscreenImage(imageSrc, imageAlt = '') {
+            if (!imageSrc || imageSrc.trim() === '') {
+                console.warn('No image source provided for fullscreen view');
+                return;
+            }
+
+            console.log('📷 Opening fullscreen image:', imageSrc.substring(0, 50) + '...');
+            
+            // Close other modals that might be open
+            if (!profileModal.classList.contains('hidden')) {
+                closeProfile();
+            }
+            if (!photoPreviewModal.classList.contains('hidden')) {
+                cancelPhotoUpload();
+            }
+            
+            // Show the modal first
+            fullscreenImageModal.classList.remove('hidden');
+            
+            // Show loading state
+            fullscreenImage.style.display = 'none';
+            const container = fullscreenImage.parentElement;
+            
+            // Create or show loading indicator
+            let loadingDiv = container.querySelector('.fullscreen-loading');
+            if (!loadingDiv) {
+                loadingDiv = document.createElement('div');
+                loadingDiv.className = 'fullscreen-loading';
+                loadingDiv.textContent = 'Loading image...';
+                container.appendChild(loadingDiv);
+            }
+            loadingDiv.style.display = 'block';
+            
+            // Load the image
+            const img = new Image();
+            img.onload = function() {
+                // Hide loading and show image
+                loadingDiv.style.display = 'none';
+                fullscreenImage.src = imageSrc;
+                fullscreenImage.alt = imageAlt;
+                fullscreenImage.style.display = 'block';
+            };
+            
+            img.onerror = function() {
+                // Hide loading and show error
+                loadingDiv.textContent = 'Error loading image';
+                setTimeout(() => {
+                    hideFullscreenImage();
+                }, 2000);
+            };
+            
+            img.src = imageSrc;
+            
+            // Prevent body scrolling when modal is open
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideFullscreenImage() {
+            console.log('📷 Closing fullscreen image');
+            
+            // Hide the modal
+            fullscreenImageModal.classList.add('hidden');
+            
+            // Hide loading indicator if present
+            const loadingDiv = fullscreenImageModal.querySelector('.fullscreen-loading');
+            if (loadingDiv) {
+                loadingDiv.style.display = 'none';
+            }
+            
+            // Clear and hide the image completely
+            fullscreenImage.style.display = 'none';
+            fullscreenImage.removeAttribute('src');
+            fullscreenImage.alt = '';
+            
+            // Restore body scrolling if no other modals are open
+            if (profileModal.classList.contains('hidden') && photoPreviewModal.classList.contains('hidden')) {
+                document.body.style.overflow = '';
+            }
+        }
+
         // Profile event listeners
         closeProfileBtn.addEventListener('click', closeProfile);
         userProfilePic.addEventListener('click', () => {
@@ -1733,6 +1933,29 @@
         photoUploadInput.addEventListener('change', handlePhotoSelect);
         savePhotoBtn.addEventListener('click', saveProfilePhoto);
         cancelPhotoBtn.addEventListener('click', cancelPhotoUpload);
+
+        // Full Screen Image Event Listeners
+        fullscreenCloseBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent triggering the modal click handler
+            hideFullscreenImage();
+        });
+        
+        // Close fullscreen when clicking anywhere on the modal (background, container, or image)
+        fullscreenImageModal.addEventListener('click', (e) => {
+            hideFullscreenImage();
+        });
+        
+        // Close fullscreen when clicking on the image itself (redundant but explicit)
+        fullscreenImage.addEventListener('click', (e) => {
+            hideFullscreenImage();
+        });
+        
+        // Close fullscreen with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !fullscreenImageModal.classList.contains('hidden')) {
+                hideFullscreenImage();
+            }
+        });
 
         // Close modals when clicking outside
         profileModal.addEventListener('click', (e) => {
@@ -2942,6 +3165,15 @@
         
         // Event delegation for dynamic elements
         document.addEventListener('click', function(e) {
+            // Full screen image handling
+            if (e.target.classList.contains('post-image')) {
+                e.stopPropagation(); // Prevent any swipe or other post interactions
+                const imageSrc = e.target.src;
+                const imageAlt = e.target.alt || 'Post image';
+                showFullscreenImage(imageSrc, imageAlt);
+                return;
+            }
+
             // Profile click handling
             if (e.target.closest('[data-user-id]')) {
                 const element = e.target.closest('[data-user-id]');
