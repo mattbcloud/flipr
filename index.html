@@ -67,7 +67,6 @@
         .user-info {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
         }
 
         /* Profile picture styles */
@@ -137,14 +136,6 @@
             font-weight: bold;
             font-size: 1.2rem;
             cursor: pointer;
-        }
-
-        .user-info button {
-            background-color: transparent;
-            border: none;
-            color: var(--secondary-color);
-            cursor: pointer;
-            font-weight: 600;
         }
 
         .container {
@@ -751,6 +742,25 @@
         .profile-join-date {
             color: var(--secondary-text);
             font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .profile-logout-btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 0 5px rgba(255, 16, 240, 0.5);
+            margin-top: 0.5rem;
+        }
+
+        .profile-logout-btn:hover {
+            background-color: #e60fdb;
         }
 
         .profile-stats {
@@ -1109,6 +1119,7 @@
                 </div>
                 <div class="profile-username" id="profile-username">Username</div>
                 <div class="profile-join-date" id="profile-join-date">Joined January 2024</div>
+                <button class="profile-logout-btn" id="logout-btn">Logout</button>
             </div>
             <div class="profile-stats">
                 <div class="stat">
@@ -1152,7 +1163,6 @@
             <h1><span style="color: #39FF14;">F</span><span style="color: #FF10F0;">l</span><span style="color: #39FF14;">i</span><span style="color: #FF10F0;">p</span><span style="color: #39FF14;">r</span></h1>
             <div class="user-info">
                 <div id="user-profile-pic" class="profile-pic">A</div>
-                <button id="logout-btn">Logout</button>
             </div>
         </header>
 
@@ -1234,7 +1244,6 @@
         const showLoginLink = document.getElementById('show-login');
         const appInterface = document.getElementById('app-interface');
         const userProfilePic = document.getElementById('user-profile-pic');
-        const logoutBtn = document.getElementById('logout-btn');
         const postTextarea = document.getElementById('post-text');
         const imageInput = document.getElementById('image-input');
         const videoInput = document.getElementById('video-input');
@@ -1418,9 +1427,15 @@
             // Set basic profile info
             profileUsername.textContent = username;
             
-            // Show/hide change photo button based on whether this is the current user's profile
+            // Show/hide change photo button and logout button based on whether this is the current user's profile
             const isOwnProfile = currentUser && userId === currentUser.uid;
             changePhotoBtn.style.display = isOwnProfile ? 'flex' : 'none';
+            
+            // Show/hide logout button - only show on user's own profile
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.style.display = isOwnProfile ? 'block' : 'none';
+            }
             
             // Get user data and posts
             Promise.all([
@@ -1983,7 +1998,12 @@
             loginForm.classList.remove('hidden');
         });
         
-        logoutBtn.addEventListener('click', logout);
+        // Logout button is now in the profile modal, so we use event delegation
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'logout-btn') {
+                logout();
+            }
+        });
         
         // Format seconds to MM:SS
         function formatDuration(seconds) {
@@ -2186,6 +2206,11 @@
         
         // Logout Function
         function logout() {
+            // Close profile modal if it's open
+            if (!profileModal.classList.contains('hidden')) {
+                closeProfile();
+            }
+            
             showLoading();
             auth.signOut()
                 .catch((error) => {
