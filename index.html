@@ -1152,7 +1152,6 @@
             <h1><span style="color: #39FF14;">F</span><span style="color: #FF10F0;">l</span><span style="color: #39FF14;">i</span><span style="color: #FF10F0;">p</span><span style="color: #39FF14;">r</span></h1>
             <div class="user-info">
                 <div id="user-profile-pic" class="profile-pic">A</div>
-                <span id="username-display">Username</span>
                 <button id="logout-btn">Logout</button>
             </div>
         </header>
@@ -1234,7 +1233,6 @@
         const showSignupLink = document.getElementById('show-signup');
         const showLoginLink = document.getElementById('show-login');
         const appInterface = document.getElementById('app-interface');
-        const usernameDisplay = document.getElementById('username-display');
         const userProfilePic = document.getElementById('user-profile-pic');
         const logoutBtn = document.getElementById('logout-btn');
         const postTextarea = document.getElementById('post-text');
@@ -2015,8 +2013,7 @@
                                 
                                 console.log('👤 Current user set:', currentUser.username);
                                 
-                                // Update UI
-                                usernameDisplay.textContent = currentUser.username;
+                                // Update UI - Only update profile picture, not username display
                                 updateProfilePicture(userProfilePic, currentUser, 'profile-pic');
                                 showAppInterface();
                                 loadPosts();
