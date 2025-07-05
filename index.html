@@ -825,6 +825,7 @@
             margin-bottom: 1rem;
             border: 1px solid var(--border-color);
             transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
         }
 
         .profile-post-card:hover {
@@ -1427,6 +1428,31 @@
             }
         }
 
+        // NEW: Function to open a specific post in the feed
+        function openPostInFeed(postId) {
+            console.log('🎯 Opening post in feed:', postId);
+            
+            // Find the post in allPosts array
+            const post = allPosts.find(p => p.id === postId);
+            
+            if (!post) {
+                console.error('❌ Post not found in allPosts array:', postId);
+                alert('Post not found');
+                return;
+            }
+            
+            // Close profile modal
+            closeProfile();
+            
+            // Set this post as the current post
+            currentPost = post;
+            
+            // Display the post
+            displayCurrentPost();
+            
+            console.log('✅ Post opened in feed:', post.author);
+        }
+
         // Profile Modal Functions
         function showProfile(userId, username) {
             console.log('👤 Showing profile for:', username, userId);
@@ -1526,6 +1552,8 @@
         function createProfilePostElement(post) {
             const postElement = document.createElement('div');
             postElement.className = 'profile-post-card';
+            // Add data attribute to identify this as a clickable profile post
+            postElement.setAttribute('data-post-id', post.id);
 
             const postDate = new Date(post.timestamp);
             const timeAgo = getTimeAgo(postDate);
@@ -1543,7 +1571,7 @@
 
             let mediaIndicator = '';
             if (post.videoURL) {
-                // For video posts, create a thumbnail on-demand
+                // For video posts with autoplay
                 mediaIndicator = `
                     <div class="media-indicator">
                         <div style="position: relative; display: inline-block;">
@@ -3202,6 +3230,18 @@
         
         // Event delegation for dynamic elements
         document.addEventListener('click', function(e) {
+            // NEW: Profile post click handling - check for profile post clicks first
+            if (e.target.closest('.profile-post-card[data-post-id]')) {
+                const postCard = e.target.closest('.profile-post-card[data-post-id]');
+                const postId = postCard.getAttribute('data-post-id');
+                
+                if (postId) {
+                    console.log('🎯 Profile post clicked:', postId);
+                    openPostInFeed(postId);
+                    return; // Stop event propagation
+                }
+            }
+
             // Full screen image handling
             if (e.target.classList.contains('post-image')) {
                 e.stopPropagation(); // Prevent any swipe or other post interactions
