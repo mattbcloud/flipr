@@ -2284,12 +2284,6 @@
                     return;
                 }
                 
-                // Size check (optional, can be adjusted)
-                if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                    alert('Image is too large. Please select an image smaller than 5MB.');
-                    return;
-                }
-                
                 // Clear any existing video if one was selected
                 if (activeMediaType === 'video') {
                     removeVideo();
@@ -2322,12 +2316,6 @@
             // Validate file is a video
             if (!file.type.startsWith('video/')) {
                 alert('Please select a video file');
-                return;
-            }
-            
-            // Size check
-            if (file.size > 50 * 1024 * 1024) { // 50MB limit
-                alert('Video is too large. Please select a video smaller than 50MB.');
                 return;
             }
             
