@@ -2289,6 +2289,9 @@
                     removeVideo();
                 }
                 
+                // Store file for later use (similar to video handling)
+                window.selectedImageFile = file;
+                
                 const reader = new FileReader();
                 
                 reader.onload = function(event) {
@@ -2373,6 +2376,8 @@
             }
             imagePreview.style.display = 'none';
             activeMediaType = null;
+            // Clear any stored references
+            window.selectedImageFile = null;
         }
         
         // Remove Selected Video
@@ -2406,7 +2411,7 @@
             const text = postTextarea.value.trim();
             
             // Check media type
-            let hasImage = activeMediaType === 'image' && previewImg.src && previewImg.src.trim() !== '';
+            let hasImage = activeMediaType === 'image' && window.selectedImageFile;
             let hasVideo = activeMediaType === 'video' && window.selectedVideoFile;
             
             if (!text && !hasImage && !hasVideo) {
@@ -2416,9 +2421,57 @@
             
             showLoading();
             
-            // For image posts
+            // For image posts - upload to Firebase Storage
             if (hasImage) {
-                createFirebasePost(text, previewImg.src, null, null, null);
+                try {
+                    console.log('Starting image upload...');
+                    console.log('File size:', window.selectedImageFile.size, 'bytes');
+                    console.log('File type:', window.selectedImageFile.type);
+                    console.log('User ID:', currentUser.uid);
+                    
+                    // Create a unique filename for the image
+                    const imageFileName = 'images/' + currentUser.uid + '/' + Date.now() + '_' + window.selectedImageFile.name;
+                    console.log('Upload path:', imageFileName);
+                    
+                    // Upload image to Firebase Storage
+                    const imageRef = storageRef.child(imageFileName);
+                    const uploadTask = imageRef.put(window.selectedImageFile);
+                    
+                    // Monitor upload progress
+                    uploadTask.on('state_changed', 
+                        // Progress function
+                        (snapshot) => {
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            console.log('Upload progress: ' + progress.toFixed(1) + '%');
+                        },
+                        // Error function
+                        (error) => {
+                            console.error('Upload error details:', error);
+                            console.error('Error code:', error.code);
+                            console.error('Error message:', error.message);
+                            alert('Error uploading image: ' + error.message);
+                            hideLoading();
+                        },
+                        // Complete function
+                        () => {
+                            // Get the download URL
+                            uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                                console.log('Image uploaded successfully. URL:', downloadURL);
+                                
+                                // Now create post with the image URL
+                                createFirebasePost(text, downloadURL, null, null, null);
+                            }).catch(urlError => {
+                                console.error('Error getting download URL:', urlError);
+                                alert('Error completing image upload. Please try again.');
+                                hideLoading();
+                            });
+                        }
+                    );
+                } catch (error) {
+                    console.error('Error uploading image:', error);
+                    alert('Error processing image. Please try again with a different image.');
+                    hideLoading();
+                }
                 return;
             }
             
@@ -2499,7 +2552,7 @@
         }
         
         // Create post in Firebase
-        function createFirebasePost(text, imageData, videoURL, videoThumbnail, videoDuration) {
+        function createFirebasePost(text, imageURL, videoURL, videoThumbnail, videoDuration) {
             // Client-side validation before sending to Firebase
             if (!currentUser) {
                 alert('You must be logged in to create a post');
@@ -2520,8 +2573,8 @@
                 author: currentUser.username,  // Required by security rules
                 authorProfilePicture: currentUser.profilePicture || null, // Include profile picture
                 text: text || '',
-                image: imageData,
-                videoURL: videoURL, // Now using a URL to Firebase Storage instead of embedded video data
+                image: imageURL, // Now stores Firebase Storage URL instead of data URL
+                videoURL: videoURL, // Firebase Storage URL for videos
                 videoThumbnail: videoThumbnail,
                 videoDuration: videoDuration,
                 timestamp: firebase.database.ServerValue.TIMESTAMP,  // Required by security rules
