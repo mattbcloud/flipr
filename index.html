@@ -1662,22 +1662,27 @@
             return postElement;
         }
 
-        // Function to generate video thumbnail on-demand
+        // FIXED: Function to generate video thumbnail with proper cross-origin handling
         function generateVideoThumbnail(videoUrl, container) {
             if (!container) return;
             
             const video = document.createElement('video');
-            video.crossOrigin = 'anonymous';
             video.muted = true;
             video.style.display = 'none';
+            video.preload = 'metadata';
             
-            video.onloadeddata = function() {
+            // Try with crossOrigin first for proper CORS handling
+            video.crossOrigin = 'anonymous';
+            
+            video.onloadedmetadata = function() {
                 try {
                     // Seek to 1 second in or 10% of duration, whichever is smaller
                     const seekTime = Math.min(1, video.duration * 0.1);
                     video.currentTime = seekTime;
                 } catch (error) {
                     console.warn('Could not seek video for thumbnail:', error);
+                    // Try without seeking
+                    video.currentTime = 0;
                 }
             };
             
@@ -1691,7 +1696,7 @@
                     // Draw video frame to canvas
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     
-                    // Convert to data URL
+                    // Convert to data URL - this may fail due to tainted canvas
                     const thumbnailData = canvas.toDataURL('image/jpeg', 0.8);
                     
                     // Update the container with the actual thumbnail
@@ -1701,28 +1706,114 @@
                         thumbnailElement.style.backgroundSize = 'cover';
                         thumbnailElement.style.backgroundPosition = 'center';
                         thumbnailElement.innerHTML = ''; // Remove the 📹 icon
+                        console.log('✅ Video thumbnail generated successfully');
+                    } else {
+                        // If thumbnailData is empty, fall back to styled icon
+                        createStyledVideoThumbnail(thumbnailElement);
                     }
                 } catch (error) {
-                    console.warn('Could not generate video thumbnail:', error);
-                    // Keep the default 📹 icon
+                    if (error.name === 'SecurityError') {
+                        console.warn('🔒 Canvas tainted by cross-origin video, using styled thumbnail instead');
+                        // Create a styled thumbnail instead of trying to extract video frame
+                        const thumbnailElement = container.querySelector('.post-thumbnail');
+                        createStyledVideoThumbnail(thumbnailElement);
+                    } else {
+                        console.warn('Could not generate video thumbnail:', error);
+                        // Keep the default 📹 icon
+                    }
                 } finally {
                     // Clean up
-                    document.body.removeChild(video);
+                    cleanupVideoElement(video);
                 }
             };
             
-            video.onerror = function() {
-                console.warn('Video failed to load for thumbnail generation');
-                // Keep the default 📹 icon
+            video.onerror = function(e) {
+                console.warn('Video failed to load for thumbnail generation, trying without CORS...');
+                
+                // Try again without CORS if the first attempt failed
+                const videoNoCors = document.createElement('video');
+                videoNoCors.muted = true;
+                videoNoCors.style.display = 'none';
+                videoNoCors.preload = 'metadata';
+                // Don't set crossOrigin this time
+                
+                videoNoCors.onloadedmetadata = function() {
+                    // Just use a styled thumbnail since we can't extract frames without CORS
+                    const thumbnailElement = container.querySelector('.post-thumbnail');
+                    createStyledVideoThumbnail(thumbnailElement);
+                    cleanupVideoElement(videoNoCors);
+                };
+                
+                videoNoCors.onerror = function() {
+                    console.warn('Video failed to load completely, keeping default icon');
+                    cleanupVideoElement(videoNoCors);
+                };
+                
                 try {
-                    document.body.removeChild(video);
-                } catch (e) {}
+                    document.body.appendChild(videoNoCors);
+                    videoNoCors.src = videoUrl;
+                    videoNoCors.load();
+                } catch (error) {
+                    console.error('Error setting up fallback video:', error);
+                    cleanupVideoElement(videoNoCors);
+                }
+                
+                // Clean up original video
+                cleanupVideoElement(video);
             };
             
+            // Handle timeout for video loading
+            const timeout = setTimeout(() => {
+                console.warn('Video thumbnail generation timed out');
+                cleanupVideoElement(video);
+            }, 8000); // 8 second timeout
+            
+            // Clear timeout if video loads successfully
+            video.addEventListener('loadedmetadata', () => {
+                clearTimeout(timeout);
+            });
+            
             // Add to DOM temporarily and load video
-            document.body.appendChild(video);
-            video.src = videoUrl;
-            video.load();
+            try {
+                document.body.appendChild(video);
+                video.src = videoUrl;
+                video.load();
+                console.log('🎬 Loading video for thumbnail generation:', videoUrl.substring(0, 50) + '...');
+            } catch (error) {
+                console.error('Error setting up video for thumbnail:', error);
+                clearTimeout(timeout);
+                cleanupVideoElement(video);
+            }
+        }
+        
+        // Helper function to create a styled video thumbnail when canvas extraction fails
+        function createStyledVideoThumbnail(thumbnailElement) {
+            if (!thumbnailElement) return;
+            
+            // Create a nice gradient background with play icon
+            thumbnailElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            thumbnailElement.style.backgroundSize = 'cover';
+            thumbnailElement.style.backgroundPosition = 'center';
+            thumbnailElement.innerHTML = '<div style="color: white; font-size: 16px; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">▶</div>';
+            thumbnailElement.style.display = 'flex';
+            thumbnailElement.style.alignItems = 'center';
+            thumbnailElement.style.justifyContent = 'center';
+            
+            console.log('✅ Created styled video thumbnail as fallback');
+        }
+        
+        // Helper function to safely clean up video elements
+        function cleanupVideoElement(video) {
+            try {
+                if (video && document.body.contains(video)) {
+                    video.pause();
+                    video.removeAttribute('src');
+                    video.load(); // Reset the video element
+                    document.body.removeChild(video);
+                }
+            } catch (e) {
+                console.warn('Error cleaning up video element:', e);
+            }
         }
 
         function closeProfile() {
@@ -2525,7 +2616,7 @@
                     const videoFileName = 'videos/' + currentUser.uid + '/' + Date.now() + '_' + window.selectedVideoFile.name;
                     console.log('Upload path:', videoFileName);
                     
-                    // Get thumbnail
+                    // Get thumbnail from preview video (should work since it's a local blob URL)
                     let thumbnailData = null;
                     try {
                         const canvas = document.createElement('canvas');
@@ -2534,12 +2625,17 @@
                         const ctx = canvas.getContext('2d');
                         
                         // Only try to draw if the video is ready
-                        if (previewVideo.readyState >= 2) {
+                        if (previewVideo.readyState >= 2 && previewVideo.videoWidth > 0) {
                             ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
                             thumbnailData = canvas.toDataURL('image/jpeg', 0.8);
+                            console.log('✅ Upload thumbnail generated successfully');
+                        } else {
+                            console.warn('⚠️ Video not ready for thumbnail generation');
                         }
                     } catch (thumbErr) {
-                        console.warn('Could not create thumbnail:', thumbErr);
+                        console.warn('Could not create upload thumbnail:', thumbErr);
+                        // For uploads, this shouldn't happen since we're using local blob URLs
+                        // But if it does, we'll just upload without a thumbnail
                     }
                     
                     // Upload video to Firebase Storage
