@@ -826,38 +826,11 @@
             border: 1px solid var(--border-color);
             transition: transform 0.2s, box-shadow 0.2s;
             cursor: pointer;
-            position: relative;
         }
 
         .profile-post-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(255, 16, 240, 0.3);
-        }
-
-        .profile-post-delete-btn {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background-color: rgba(255, 16, 240, 0.8);
-            border: none;
-            color: white;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            transition: background-color 0.2s, transform 0.2s;
-            line-height: 1;
-        }
-
-        .profile-post-delete-btn:hover {
-            background-color: var(--secondary-color);
-            transform: scale(1.1);
         }
 
         .profile-post-meta {
@@ -1570,16 +1543,13 @@
                 return;
             }
 
-            // Check if this is the user's own profile
-            const isOwnProfile = currentUser && posts.length > 0 && posts[0].authorId === currentUser.uid;
-
             posts.slice(0, 10).forEach(post => { // Show max 10 posts
-                const postElement = createProfilePostElement(post, isOwnProfile);
+                const postElement = createProfilePostElement(post);
                 userPostsContainer.appendChild(postElement);
             });
         }
 
-        function createProfilePostElement(post, isOwnProfile = false) {
+        function createProfilePostElement(post) {
             const postElement = document.createElement('div');
             postElement.className = 'profile-post-card';
             // Add data attribute to identify this as a clickable profile post
@@ -1619,15 +1589,7 @@
                 mediaIndicator = `<div class="media-indicator"><img src="${post.image}" alt="Post thumbnail" class="post-thumbnail"></div>`;
             }
 
-            // Add delete button if this is the user's own profile
-            const deleteButton = isOwnProfile ? `
-                <button class="profile-post-delete-btn" data-post-id="${post.id}" title="Delete post">
-                    ×
-                </button>
-            ` : '';
-
             postElement.innerHTML = `
-                ${deleteButton}
                 <div class="profile-post-meta">
                     <span>${timeAgo}</span>
                     ${mediaIndicator}
@@ -1662,27 +1624,22 @@
             return postElement;
         }
 
-        // FIXED: Function to generate video thumbnail with proper cross-origin handling
+        // Function to generate video thumbnail on-demand
         function generateVideoThumbnail(videoUrl, container) {
             if (!container) return;
             
             const video = document.createElement('video');
+            video.crossOrigin = 'anonymous';
             video.muted = true;
             video.style.display = 'none';
-            video.preload = 'metadata';
             
-            // Try with crossOrigin first for proper CORS handling
-            video.crossOrigin = 'anonymous';
-            
-            video.onloadedmetadata = function() {
+            video.onloadeddata = function() {
                 try {
                     // Seek to 1 second in or 10% of duration, whichever is smaller
                     const seekTime = Math.min(1, video.duration * 0.1);
                     video.currentTime = seekTime;
                 } catch (error) {
                     console.warn('Could not seek video for thumbnail:', error);
-                    // Try without seeking
-                    video.currentTime = 0;
                 }
             };
             
@@ -1696,7 +1653,7 @@
                     // Draw video frame to canvas
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     
-                    // Convert to data URL - this may fail due to tainted canvas
+                    // Convert to data URL
                     const thumbnailData = canvas.toDataURL('image/jpeg', 0.8);
                     
                     // Update the container with the actual thumbnail
@@ -1706,114 +1663,28 @@
                         thumbnailElement.style.backgroundSize = 'cover';
                         thumbnailElement.style.backgroundPosition = 'center';
                         thumbnailElement.innerHTML = ''; // Remove the 📹 icon
-                        console.log('✅ Video thumbnail generated successfully');
-                    } else {
-                        // If thumbnailData is empty, fall back to styled icon
-                        createStyledVideoThumbnail(thumbnailElement);
                     }
                 } catch (error) {
-                    if (error.name === 'SecurityError') {
-                        console.warn('🔒 Canvas tainted by cross-origin video, using styled thumbnail instead');
-                        // Create a styled thumbnail instead of trying to extract video frame
-                        const thumbnailElement = container.querySelector('.post-thumbnail');
-                        createStyledVideoThumbnail(thumbnailElement);
-                    } else {
-                        console.warn('Could not generate video thumbnail:', error);
-                        // Keep the default 📹 icon
-                    }
+                    console.warn('Could not generate video thumbnail:', error);
+                    // Keep the default 📹 icon
                 } finally {
                     // Clean up
-                    cleanupVideoElement(video);
-                }
-            };
-            
-            video.onerror = function(e) {
-                console.warn('Video failed to load for thumbnail generation, trying without CORS...');
-                
-                // Try again without CORS if the first attempt failed
-                const videoNoCors = document.createElement('video');
-                videoNoCors.muted = true;
-                videoNoCors.style.display = 'none';
-                videoNoCors.preload = 'metadata';
-                // Don't set crossOrigin this time
-                
-                videoNoCors.onloadedmetadata = function() {
-                    // Just use a styled thumbnail since we can't extract frames without CORS
-                    const thumbnailElement = container.querySelector('.post-thumbnail');
-                    createStyledVideoThumbnail(thumbnailElement);
-                    cleanupVideoElement(videoNoCors);
-                };
-                
-                videoNoCors.onerror = function() {
-                    console.warn('Video failed to load completely, keeping default icon');
-                    cleanupVideoElement(videoNoCors);
-                };
-                
-                try {
-                    document.body.appendChild(videoNoCors);
-                    videoNoCors.src = videoUrl;
-                    videoNoCors.load();
-                } catch (error) {
-                    console.error('Error setting up fallback video:', error);
-                    cleanupVideoElement(videoNoCors);
-                }
-                
-                // Clean up original video
-                cleanupVideoElement(video);
-            };
-            
-            // Handle timeout for video loading
-            const timeout = setTimeout(() => {
-                console.warn('Video thumbnail generation timed out');
-                cleanupVideoElement(video);
-            }, 8000); // 8 second timeout
-            
-            // Clear timeout if video loads successfully
-            video.addEventListener('loadedmetadata', () => {
-                clearTimeout(timeout);
-            });
-            
-            // Add to DOM temporarily and load video
-            try {
-                document.body.appendChild(video);
-                video.src = videoUrl;
-                video.load();
-                console.log('🎬 Loading video for thumbnail generation:', videoUrl.substring(0, 50) + '...');
-            } catch (error) {
-                console.error('Error setting up video for thumbnail:', error);
-                clearTimeout(timeout);
-                cleanupVideoElement(video);
-            }
-        }
-        
-        // Helper function to create a styled video thumbnail when canvas extraction fails
-        function createStyledVideoThumbnail(thumbnailElement) {
-            if (!thumbnailElement) return;
-            
-            // Create a nice gradient background with play icon
-            thumbnailElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-            thumbnailElement.style.backgroundSize = 'cover';
-            thumbnailElement.style.backgroundPosition = 'center';
-            thumbnailElement.innerHTML = '<div style="color: white; font-size: 16px; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">▶</div>';
-            thumbnailElement.style.display = 'flex';
-            thumbnailElement.style.alignItems = 'center';
-            thumbnailElement.style.justifyContent = 'center';
-            
-            console.log('✅ Created styled video thumbnail as fallback');
-        }
-        
-        // Helper function to safely clean up video elements
-        function cleanupVideoElement(video) {
-            try {
-                if (video && document.body.contains(video)) {
-                    video.pause();
-                    video.removeAttribute('src');
-                    video.load(); // Reset the video element
                     document.body.removeChild(video);
                 }
-            } catch (e) {
-                console.warn('Error cleaning up video element:', e);
-            }
+            };
+            
+            video.onerror = function() {
+                console.warn('Video failed to load for thumbnail generation');
+                // Keep the default 📹 icon
+                try {
+                    document.body.removeChild(video);
+                } catch (e) {}
+            };
+            
+            // Add to DOM temporarily and load video
+            document.body.appendChild(video);
+            video.src = videoUrl;
+            video.load();
         }
 
         function closeProfile() {
@@ -2616,7 +2487,7 @@
                     const videoFileName = 'videos/' + currentUser.uid + '/' + Date.now() + '_' + window.selectedVideoFile.name;
                     console.log('Upload path:', videoFileName);
                     
-                    // Get thumbnail from preview video (should work since it's a local blob URL)
+                    // Get thumbnail
                     let thumbnailData = null;
                     try {
                         const canvas = document.createElement('canvas');
@@ -2625,17 +2496,12 @@
                         const ctx = canvas.getContext('2d');
                         
                         // Only try to draw if the video is ready
-                        if (previewVideo.readyState >= 2 && previewVideo.videoWidth > 0) {
+                        if (previewVideo.readyState >= 2) {
                             ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
                             thumbnailData = canvas.toDataURL('image/jpeg', 0.8);
-                            console.log('✅ Upload thumbnail generated successfully');
-                        } else {
-                            console.warn('⚠️ Video not ready for thumbnail generation');
                         }
                     } catch (thumbErr) {
-                        console.warn('Could not create upload thumbnail:', thumbErr);
-                        // For uploads, this shouldn't happen since we're using local blob URLs
-                        // But if it does, we'll just upload without a thumbnail
+                        console.warn('Could not create thumbnail:', thumbErr);
                     }
                     
                     // Upload video to Firebase Storage
@@ -3405,18 +3271,6 @@
         
         // Event delegation for dynamic elements
         document.addEventListener('click', function(e) {
-            // Profile post delete button clicked
-            if (e.target.closest('.profile-post-delete-btn')) {
-                e.stopPropagation(); // Prevent opening the post
-                const button = e.target.closest('.profile-post-delete-btn');
-                const postId = button.getAttribute('data-post-id');
-                
-                if (postId) {
-                    deletePost(postId);
-                }
-                return;
-            }
-
             // NEW: Profile post click handling - check for profile post clicks first
             if (e.target.closest('.profile-post-card[data-post-id]')) {
                 const postCard = e.target.closest('.profile-post-card[data-post-id]');
@@ -3627,158 +3481,6 @@
                     hideLoading();
                     handleFirebaseError(error);
                 });
-        }
-        
-        // Delete Post Function
-        function deletePost(postId) {
-            if (!currentUser) {
-                alert('You must be logged in to delete posts');
-                return;
-            }
-            
-            // Show confirmation dialog
-            if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
-                return;
-            }
-            
-            showLoading();
-            
-            // First, get the post data to find any media files to delete
-            postsRef.child(postId).once('value')
-                .then((snapshot) => {
-                    const postData = snapshot.val();
-                    
-                    if (!postData) {
-                        hideLoading();
-                        alert('Post not found');
-                        return;
-                    }
-                    
-                    // Check if user owns this post
-                    if (postData.authorId !== currentUser.uid) {
-                        hideLoading();
-                        alert('You can only delete your own posts');
-                        return;
-                    }
-                    
-                    // Delete the post from Firebase Database
-                    postsRef.child(postId).remove()
-                        .then(() => {
-                            console.log('✅ Post deleted from database:', postId);
-                            
-                            // Delete associated media files from Storage
-                            const deletePromises = [];
-                            
-                            // Delete image if it's stored in Firebase Storage
-                            if (postData.image && postData.image.includes('firebase')) {
-                                try {
-                                    const imageRef = storage.refFromURL(postData.image);
-                                    deletePromises.push(imageRef.delete());
-                                    console.log('🗑️ Deleting image from storage');
-                                } catch (error) {
-                                    console.warn('Could not delete image from storage:', error);
-                                }
-                            }
-                            
-                            // Delete video if it exists
-                            if (postData.videoURL && postData.videoURL.includes('firebase')) {
-                                try {
-                                    const videoRef = storage.refFromURL(postData.videoURL);
-                                    deletePromises.push(videoRef.delete());
-                                    console.log('🗑️ Deleting video from storage');
-                                } catch (error) {
-                                    console.warn('Could not delete video from storage:', error);
-                                }
-                            }
-                            
-                            // Wait for all storage deletions to complete (or fail)
-                            Promise.allSettled(deletePromises)
-                                .then((results) => {
-                                    results.forEach((result, index) => {
-                                        if (result.status === 'fulfilled') {
-                                            console.log(`✅ Media file ${index + 1} deleted from storage`);
-                                        } else {
-                                            console.warn(`⚠️ Could not delete media file ${index + 1}:`, result.reason);
-                                        }
-                                    });
-                                })
-                                .finally(() => {
-                                    // Update local state regardless of storage deletion results
-                                    updateLocalStateAfterDeletion(postId);
-                                    hideLoading();
-                                    alert('Post deleted successfully!');
-                                });
-                        })
-                        .catch((error) => {
-                            hideLoading();
-                            console.error('Error deleting post from database:', error);
-                            handleFirebaseError(error);
-                        });
-                })
-                .catch((error) => {
-                    hideLoading();
-                    console.error('Error fetching post data:', error);
-                    handleFirebaseError(error);
-                });
-        }
-        
-        // Update local state after post deletion
-        function updateLocalStateAfterDeletion(postId) {
-            // Remove from allPosts array
-            const postIndex = allPosts.findIndex(p => p.id === postId);
-            if (postIndex !== -1) {
-                allPosts.splice(postIndex, 1);
-                console.log('🗑️ Removed post from allPosts array');
-            }
-            
-            // Remove from viewingQueue if present
-            const queueIndex = viewingQueue.findIndex(p => p.id === postId);
-            if (queueIndex !== -1) {
-                viewingQueue.splice(queueIndex, 1);
-                console.log('🗑️ Removed post from viewingQueue');
-            }
-            
-            // Remove from recently disliked set
-            recentlyDisliked.delete(postId);
-            
-            // If this was the current post being viewed, show next post
-            if (currentPost && currentPost.id === postId) {
-                console.log('🗑️ Deleted post was currently being viewed, showing next post');
-                currentPost = null;
-                goToNextPost();
-            }
-            
-            // Remove from profile display if profile modal is open
-            const profilePostElement = document.querySelector(`[data-post-id="${postId}"]`);
-            if (profilePostElement) {
-                profilePostElement.remove();
-                console.log('🗑️ Removed post from profile display');
-                
-                // Check if this was the last post in the profile
-                const remainingPosts = userPostsContainer.querySelectorAll('.profile-post-card');
-                if (remainingPosts.length === 0) {
-                    userPostsContainer.innerHTML = '<div class="no-posts">No posts yet</div>';
-                    // Update user score to 0 when no posts remain
-                    if (userScore) {
-                        userScore.textContent = '0';
-                    }
-                } else {
-                    // Recalculate and update user score based on remaining posts
-                    let totalScore = 0;
-                    remainingPosts.forEach(postCard => {
-                        const postId = postCard.getAttribute('data-post-id');
-                        const post = allPosts.find(p => p.id === postId);
-                        if (post) {
-                            const likes = post.likes || 0;
-                            const dislikes = post.dislikes || 0;
-                            totalScore += (likes - dislikes);
-                        }
-                    });
-                    if (userScore) {
-                        userScore.textContent = totalScore;
-                    }
-                }
-            }
         }
         
         // DEBUG: Add debugging function to window for testing
