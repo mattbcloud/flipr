@@ -806,6 +806,58 @@
             text-shadow: 0 0 6px rgba(255, 16, 240, 0.6);
         }
 
+        /* NEW: Filter Controls Section */
+        .profile-filter-controls {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(17, 17, 17, 0.3);
+        }
+
+        .filter-toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .filter-toggle-label {
+            font-size: 0.95rem;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        /* Toggle Switch Styles */
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background-color: var(--border-color);
+            border-radius: 24px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-switch.active {
+            background-color: var(--secondary-color);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 8px rgba(255, 16, 240, 0.4);
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background-color: var(--text-color);
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(26px);
+        }
+
         .profile-posts {
             padding: 1rem;
         }
@@ -1172,6 +1224,17 @@
                     </span>
                 </div>
             </div>
+            <!-- NEW: Filter Controls Section -->
+            <div class="profile-filter-controls">
+                <div class="filter-toggle-container">
+                    <label class="filter-toggle-label" for="hide-disliked-toggle">
+                        Hide posts I disliked
+                    </label>
+                    <div class="toggle-switch" id="hide-disliked-toggle">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
             <div class="profile-posts">
                 <div id="user-posts-container">
                     <!-- User posts will be loaded here -->
@@ -1311,6 +1374,10 @@
         const userScore = document.getElementById('user-score');
         const userPostsContainer = document.getElementById('user-posts-container');
         
+        // NEW: Filter Toggle Elements
+        const hideDislikedToggle = document.getElementById('hide-disliked-toggle');
+        let hideDislikedPosts = false; // Filter state
+        
         // Photo Upload Elements
         const changePhotoBtn = document.getElementById('change-photo-btn');
         const photoUploadInput = document.getElementById('photo-upload-input');
@@ -1329,6 +1396,9 @@
         
         // Cache for user profile pictures to avoid repeated Firebase calls
         const profilePictureCache = new Map();
+        
+        // NEW: Cache for user's disliked posts
+        let userDislikedPosts = new Set();
         
         // Media type tracking
         let activeMediaType = null; // 'image', 'video', or null
@@ -1463,6 +1533,25 @@
             }
         }
 
+        // NEW: Function to load user's disliked posts from their profile
+        async function loadUserDislikedPosts(userId) {
+            if (!userId) return new Set();
+            
+            try {
+                const snapshot = await usersRef.child(`${userId}/dislikedPosts`).once('value');
+                const dislikedData = snapshot.val() || {};
+                return new Set(Object.keys(dislikedData));
+            } catch (error) {
+                console.error('Error loading user disliked posts:', error);
+                return new Set();
+            }
+        }
+
+        // NEW: Function to check if user has disliked a specific post
+        function hasUserDislikedPost(postId) {
+            return userDislikedPosts.has(postId);
+        }
+
         // NEW: Function to open a specific post in the feed
         function openPostInFeed(postId) {
             console.log('🎯 Opening post in feed:', postId);
@@ -1488,6 +1577,25 @@
             console.log('✅ Post opened in feed:', post.author);
         }
 
+        // NEW: Toggle filter for hiding disliked posts (MAIN FEED ONLY)
+        function toggleHideDislikedPosts() {
+            hideDislikedPosts = !hideDislikedPosts;
+            
+            // Update toggle visual state
+            if (hideDislikedPosts) {
+                hideDislikedToggle.classList.add('active');
+            } else {
+                hideDislikedToggle.classList.remove('active');
+            }
+            
+            console.log('🔧 Hide disliked posts toggled:', hideDislikedPosts);
+            
+            // Refresh the main feed to apply/remove the filter
+            // This ONLY affects the main swipe feed, NOT profile posts
+            refreshViewingQueue();
+            showNextPost();
+        }
+
         // Profile Modal Functions
         function showProfile(userId, username) {
             console.log('👤 Showing profile for:', username, userId);
@@ -1506,6 +1614,12 @@
                 logoutBtn.style.display = isOwnProfile ? 'block' : 'none';
             }
             
+            // NEW: Show/hide filter controls - only show on user's own profile
+            const filterControls = document.querySelector('.profile-filter-controls');
+            if (filterControls) {
+                filterControls.style.display = isOwnProfile ? 'block' : 'none';
+            }
+            
             // Get user data and posts
             Promise.all([
                 getUserData(userId),
@@ -1519,7 +1633,7 @@
                 };
                 updateProfilePicture(profileAvatar, userForDisplay, 'profile-avatar');
                 
-                displayUserProfile(userData, userPosts);
+                displayUserProfile(userData, userPosts, userId);
                 profileModal.classList.remove('hidden');
                 hideLoading();
             }).catch(error => {
@@ -1545,7 +1659,8 @@
             });
         }
 
-        function displayUserProfile(userData, userPosts) {
+        // Profile display function - NO filtering based on toggle
+        async function displayUserProfile(userData, userPosts, userId) {
             // Set join date
             if (userData && userData.createdAt) {
                 const joinDate = new Date(userData.createdAt);
@@ -1554,10 +1669,12 @@
                 profileJoinDate.textContent = 'Member since 2024';
             }
 
-            // Calculate total score
-            let totalScore = 0;
+            // Always show ALL posts in profile - no filtering based on dislike toggle
+            const postsToDisplay = userPosts;
 
-            userPosts.forEach(post => {
+            // Calculate total score based on ALL posts
+            let totalScore = 0;
+            postsToDisplay.forEach(post => {
                 const likes = post.likes || 0;
                 const dislikes = post.dislikes || 0;
                 totalScore += (likes - dislikes);
@@ -1566,20 +1683,17 @@
             // Update score
             userScore.textContent = totalScore;
 
-            // Display posts
-            displayUserPosts(userPosts);
+            // Display all posts
+            displayUserPosts(postsToDisplay, currentUser && userId === currentUser.uid);
         }
 
-        function displayUserPosts(posts) {
+        function displayUserPosts(posts, isOwnProfile = false) {
             userPostsContainer.innerHTML = '';
 
             if (posts.length === 0) {
                 userPostsContainer.innerHTML = '<div class="no-posts">No posts yet</div>';
                 return;
             }
-
-            // Check if this is the user's own profile
-            const isOwnProfile = currentUser && posts.length > 0 && posts[0].authorId === currentUser.uid;
 
             posts.slice(0, 10).forEach(post => { // Show max 10 posts
                 const postElement = createProfilePostElement(post, isOwnProfile);
@@ -2020,6 +2134,9 @@
             }
         });
 
+        // NEW: Toggle event listener
+        hideDislikedToggle.addEventListener('click', toggleHideDislikedPosts);
+
         // Photo upload event listeners
         changePhotoBtn.addEventListener('click', () => {
             photoUploadInput.click();
@@ -2121,6 +2238,12 @@
                                 };
                                 
                                 console.log('👤 Current user set:', currentUser.username);
+                                
+                                // Load user's disliked posts
+                                loadUserDislikedPosts(currentUser.uid).then(dislikedPosts => {
+                                    userDislikedPosts = dislikedPosts;
+                                    console.log(`📋 Loaded ${userDislikedPosts.size} disliked posts for user`);
+                                });
                                 
                                 // Update UI - Only update profile picture, not username display
                                 updateProfilePicture(userProfilePic, currentUser, 'profile-pic');
@@ -2705,14 +2828,37 @@
                 console.log('🔁 Starting new cycle, cleared recently disliked');
             }
             
+            // Filter posts based on user preferences
+            let availablePosts = allPosts;
+            
+            // NEW: Filter out disliked posts if toggle is enabled
+            if (hideDislikedPosts && currentUser) {
+                availablePosts = allPosts.filter(post => {
+                    const isDisliked = userDislikedPosts.has(post.id);
+                    if (isDisliked) {
+                        console.log(`🚫 Filtering out disliked post: ${post.author} (${post.id.substring(0, 8)})`);
+                    }
+                    return !isDisliked;
+                });
+                
+                console.log(`🔍 Filtered posts: ${allPosts.length} → ${availablePosts.length} (hide disliked: ${hideDislikedPosts})`);
+            }
+            
+            if (availablePosts.length === 0) {
+                console.log('❌ No posts available after filtering');
+                viewingQueue = [];
+                postsFeed.innerHTML = '<div class="post-card"><div class="post-content"><p>No posts to show. Try disabling the dislike filter or create some posts!</p></div></div>';
+                return;
+            }
+            
             // Simple approach: just get the next batch of posts
-            const batchSize = Math.min(20, allPosts.length); // Increased batch size
+            const batchSize = Math.min(20, availablePosts.length);
             viewingQueue = [];
             
             // First, try to get posts that aren't recently disliked
-            for (let i = 0; i < allPosts.length && viewingQueue.length < batchSize; i++) {
-                const postIndex = (currentCycleIndex + i) % allPosts.length;
-                const post = allPosts[postIndex];
+            for (let i = 0; i < availablePosts.length && viewingQueue.length < batchSize; i++) {
+                const postIndex = (currentCycleIndex + i) % availablePosts.length;
+                const post = availablePosts[postIndex];
                 
                 if (!recentlyDisliked.has(post.id)) {
                     viewingQueue.push(post);
@@ -2721,13 +2867,13 @@
             
             // If we don't have enough posts (because too many are recently disliked), 
             // just add posts regardless of dislike status
-            if (viewingQueue.length < Math.min(5, allPosts.length)) {
-                console.log('⚠️ Not enough posts after filtering, adding more regardless of dislike status');
+            if (viewingQueue.length < Math.min(5, availablePosts.length)) {
+                console.log('⚠️ Not enough posts after filtering, adding more regardless of recent dislike status');
                 viewingQueue = [];
                 
-                for (let i = 0; i < batchSize && i < allPosts.length; i++) {
-                    const postIndex = (currentCycleIndex + i) % allPosts.length;
-                    viewingQueue.push(allPosts[postIndex]);
+                for (let i = 0; i < batchSize && i < availablePosts.length; i++) {
+                    const postIndex = (currentCycleIndex + i) % availablePosts.length;
+                    viewingQueue.push(availablePosts[postIndex]);
                 }
             }
             
@@ -2793,8 +2939,18 @@
             queueVersion = 0;
             // Clear profile picture cache when loading posts
             profilePictureCache.clear();
+            // NEW: Clear user disliked posts when loading posts
+            userDislikedPosts = new Set();
             
             console.log('✅ All variables cleared and initialized');
+            
+            // Load user's disliked posts if logged in
+            if (currentUser) {
+                loadUserDislikedPosts(currentUser.uid).then(dislikedPosts => {
+                    userDislikedPosts = dislikedPosts;
+                    console.log(`📋 Loaded ${userDislikedPosts.size} disliked posts for current user`);
+                });
+            }
             
             // Get posts from Firebase
             postsRef.orderByChild('timestamp').limitToLast(50).once('value')
@@ -3237,7 +3393,7 @@
             return postCard;
         }
         
-        // Handle Post Like
+        // NEW: Enhanced Handle Post Like with user interaction tracking
         function handlePostLike(postId) {
             if (!currentUser) {
                 alert('Please log in to like posts');
@@ -3249,12 +3405,37 @@
             // Use a transaction to ensure likes are updated atomically
             postRef.child('likes').transaction((currentLikes) => {
                 return (currentLikes || 0) + 1;
+            }).then(() => {
+                // Track user interaction in user's profile
+                const userLikeRef = usersRef.child(`${currentUser.uid}/likedPosts/${postId}`);
+                userLikeRef.set(true);
+                
+                // NEW: If this post was previously disliked, remove it from disliked posts
+                // This "undoes" the dislike and makes the post visible in feed again
+                if (userDislikedPosts.has(postId)) {
+                    console.log('🔄 Undoing previous dislike for post:', postId.substring(0, 8));
+                    
+                    // Remove from Firebase
+                    const userDislikeRef = usersRef.child(`${currentUser.uid}/dislikedPosts/${postId}`);
+                    userDislikeRef.remove();
+                    
+                    // Remove from local cache
+                    userDislikedPosts.delete(postId);
+                    
+                    // Refresh the viewing queue so this post can appear again
+                    if (hideDislikedPosts) {
+                        console.log('🔄 Refreshing queue to show previously disliked post');
+                        refreshViewingQueue();
+                    }
+                }
+                
+                console.log('👍 Post liked and interaction tracked:', postId.substring(0, 8));
             }).catch((error) => {
                 handleFirebaseError(error);
             });
         }
         
-        // Handle Post Dislike
+        // NEW: Enhanced Handle Post Dislike with user interaction tracking
         function handlePostDislike(postId) {
             if (!currentUser) {
                 alert('Please log in to dislike posts');
@@ -3266,6 +3447,15 @@
             // Use a transaction to ensure dislikes are updated atomically
             postRef.child('dislikes').transaction((currentDislikes) => {
                 return (currentDislikes || 0) + 1;
+            }).then(() => {
+                // Track user interaction in user's profile
+                const userDislikeRef = usersRef.child(`${currentUser.uid}/dislikedPosts/${postId}`);
+                userDislikeRef.set(true);
+                
+                // Update local cache
+                userDislikedPosts.add(postId);
+                
+                console.log('👎 Post disliked and interaction tracked:', postId.substring(0, 8));
             }).catch((error) => {
                 handleFirebaseError(error);
             });
@@ -3702,6 +3892,8 @@
                 currentCycleIndex: currentCycleIndex,
                 recentlyDisliked: recentlyDisliked.size,
                 queueVersion: queueVersion,
+                hideDislikedPosts: hideDislikedPosts,
+                userDislikedPostsCount: userDislikedPosts.size,
                 topPosts: allPosts.slice(0, 5).map(p => ({
                     author: p.author,
                     score: (p.likes || 0) - (p.dislikes || 0),
@@ -3726,9 +3918,53 @@
             recentlyDisliked.clear();
             // Clear profile picture cache to get fresh data
             profilePictureCache.clear();
+            // Clear user disliked posts to get fresh data
+            userDislikedPosts = new Set();
+            if (currentUser) {
+                loadUserDislikedPosts(currentUser.uid).then(dislikedPosts => {
+                    userDislikedPosts = dislikedPosts;
+                });
+            }
             refreshViewingQueue();
             showNextPost();
             console.log('✅ Feed refreshed manually');
+        };
+
+        // NEW: Debug function to check disliked posts
+        window.checkDislikedPosts = function() {
+            console.log('📋 User disliked posts:', Array.from(userDislikedPosts));
+            console.log('🔧 Hide disliked posts enabled:', hideDislikedPosts);
+            if (currentUser) {
+                loadUserDislikedPosts(currentUser.uid).then(dislikedPosts => {
+                    console.log('📦 Fresh disliked posts from Firebase:', Array.from(dislikedPosts));
+                });
+            }
+            return {
+                userDislikedPosts: Array.from(userDislikedPosts),
+                hideDislikedPosts: hideDislikedPosts,
+                currentUser: currentUser ? currentUser.username : 'none'
+            };
+        };
+
+        // NEW: Debug function to simulate like/dislike for testing
+        window.simulateSwipe = function(direction) {
+            if (!currentPost) {
+                console.log('❌ No current post to swipe on');
+                return;
+            }
+            
+            console.log(`🧪 Simulating ${direction} swipe on: ${currentPost.author} (${currentPost.id.substring(0, 8)})`);
+            
+            if (direction === 'left') {
+                handlePostDislike(currentPost.id);
+            } else if (direction === 'right') {
+                handlePostLike(currentPost.id);
+            }
+            
+            // Go to next post after a delay to see the effect
+            setTimeout(() => {
+                goToNextPost();
+            }, 1000);
         };
 
         // Clear profile cache when user updates their profile picture
