@@ -1547,6 +1547,53 @@
             }
         }
 
+        // NEW: Save toggle setting to user profile
+        function saveHideDislikedSetting(enabled) {
+            if (!currentUser) return;
+            
+            usersRef.child(`${currentUser.uid}/hideDislikedPosts`).set(enabled)
+                .then(() => {
+                    console.log('💾 Hide disliked posts setting saved:', enabled);
+                })
+                .catch((error) => {
+                    console.error('Error saving hide disliked posts setting:', error);
+                });
+        }
+
+        // NEW: Load toggle setting from user profile
+        async function loadHideDislikedSetting(userId) {
+            if (!userId) return false;
+            
+            try {
+                const snapshot = await usersRef.child(`${userId}/hideDislikedPosts`).once('value');
+                const setting = snapshot.val();
+                return setting === true; // Default to false if not set
+            } catch (error) {
+                console.error('Error loading hide disliked posts setting:', error);
+                return false;
+            }
+        }
+
+        // NEW: Apply toggle setting to UI and logic
+        function applyHideDislikedSetting(enabled) {
+            hideDislikedPosts = enabled;
+            
+            // Update toggle visual state
+            if (enabled) {
+                hideDislikedToggle.classList.add('active');
+            } else {
+                hideDislikedToggle.classList.remove('active');
+            }
+            
+            console.log('🔧 Hide disliked posts setting applied:', enabled);
+            
+            // Refresh the main feed to apply the filter
+            refreshViewingQueue();
+            if (allPosts.length > 0) {
+                showNextPost();
+            }
+        }
+
         // NEW: Function to check if user has disliked a specific post
         function hasUserDislikedPost(postId) {
             return userDislikedPosts.has(postId);
@@ -1577,7 +1624,7 @@
             console.log('✅ Post opened in feed:', post.author);
         }
 
-        // NEW: Toggle filter for hiding disliked posts (MAIN FEED ONLY)
+        // NEW: Toggle filter for hiding disliked posts (MAIN FEED ONLY) - with persistence
         function toggleHideDislikedPosts() {
             hideDislikedPosts = !hideDislikedPosts;
             
@@ -1589,6 +1636,9 @@
             }
             
             console.log('🔧 Hide disliked posts toggled:', hideDislikedPosts);
+            
+            // Save the setting to user profile for persistence
+            saveHideDislikedSetting(hideDislikedPosts);
             
             // Refresh the main feed to apply/remove the filter
             // This ONLY affects the main swipe feed, NOT profile posts
@@ -2239,10 +2289,17 @@
                                 
                                 console.log('👤 Current user set:', currentUser.username);
                                 
-                                // Load user's disliked posts
-                                loadUserDislikedPosts(currentUser.uid).then(dislikedPosts => {
+                                // Load user's disliked posts and settings
+                                Promise.all([
+                                    loadUserDislikedPosts(currentUser.uid),
+                                    loadHideDislikedSetting(currentUser.uid)
+                                ]).then(([dislikedPosts, hideDislikedSetting]) => {
                                     userDislikedPosts = dislikedPosts;
                                     console.log(`📋 Loaded ${userDislikedPosts.size} disliked posts for user`);
+                                    
+                                    // Apply the hide disliked posts setting
+                                    applyHideDislikedSetting(hideDislikedSetting);
+                                    console.log(`⚙️ Restored hide disliked posts setting: ${hideDislikedSetting}`);
                                 });
                                 
                                 // Update UI - Only update profile picture, not username display
@@ -2264,6 +2321,16 @@
                 } else {
                     // User is signed out
                     currentUser = null;
+                    
+                    // Reset user-specific settings
+                    userDislikedPosts = new Set();
+                    hideDislikedPosts = false;
+                    
+                    // Reset toggle UI
+                    if (hideDislikedToggle) {
+                        hideDislikedToggle.classList.remove('active');
+                    }
+                    
                     showAuthForms();
                 }
                 hideLoading();
@@ -3894,6 +3961,7 @@
                 queueVersion: queueVersion,
                 hideDislikedPosts: hideDislikedPosts,
                 userDislikedPostsCount: userDislikedPosts.size,
+                settingPersistent: '✅ (saved to Firebase)',
                 topPosts: allPosts.slice(0, 5).map(p => ({
                     author: p.author,
                     score: (p.likes || 0) - (p.dislikes || 0),
@@ -3937,6 +4005,9 @@
             if (currentUser) {
                 loadUserDislikedPosts(currentUser.uid).then(dislikedPosts => {
                     console.log('📦 Fresh disliked posts from Firebase:', Array.from(dislikedPosts));
+                });
+                loadHideDislikedSetting(currentUser.uid).then(setting => {
+                    console.log('💾 Saved hide disliked setting from Firebase:', setting);
                 });
             }
             return {
