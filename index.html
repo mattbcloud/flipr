@@ -752,6 +752,16 @@
             margin-bottom: 1rem;
         }
 
+        /* Updated profile controls container */
+        .profile-controls {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
         .profile-logout-btn {
             background-color: var(--secondary-color);
             color: white;
@@ -763,11 +773,26 @@
             cursor: pointer;
             transition: background-color 0.2s;
             box-shadow: 0 0 5px rgba(255, 16, 240, 0.5);
-            margin-top: 0.5rem;
         }
 
         .profile-logout-btn:hover {
             background-color: #e60fdb;
+        }
+
+        /* Updated filter toggle styles for vertical display */
+        .filter-toggle-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-toggle-label {
+            font-size: 0.8rem;
+            color: var(--text-color);
+            font-weight: 500;
+            white-space: nowrap;
+            text-align: center;
         }
 
         .profile-stats {
@@ -806,32 +831,13 @@
             text-shadow: 0 0 6px rgba(255, 16, 240, 0.6);
         }
 
-        /* NEW: Filter Controls Section */
-        .profile-filter-controls {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            background-color: rgba(17, 17, 17, 0.3);
-        }
-
-        .filter-toggle-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .filter-toggle-label {
-            font-size: 0.95rem;
-            color: var(--text-color);
-            font-weight: 500;
-        }
-
         /* Toggle Switch Styles */
         .toggle-switch {
             position: relative;
-            width: 50px;
-            height: 24px;
+            width: 40px;
+            height: 20px;
             background-color: var(--border-color);
-            border-radius: 24px;
+            border-radius: 20px;
             cursor: pointer;
             transition: background-color 0.3s ease;
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
@@ -839,15 +845,15 @@
 
         .toggle-switch.active {
             background-color: var(--secondary-color);
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 8px rgba(255, 16, 240, 0.4);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 6px rgba(255, 16, 240, 0.4);
         }
 
         .toggle-slider {
             position: absolute;
             top: 2px;
             left: 2px;
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             background-color: var(--text-color);
             border-radius: 50%;
             transition: transform 0.3s ease;
@@ -855,7 +861,7 @@
         }
 
         .toggle-switch.active .toggle-slider {
-            transform: translateX(26px);
+            transform: translateX(20px);
         }
 
         .profile-posts {
@@ -1107,6 +1113,20 @@
                 padding: 1rem;
             }
 
+            .profile-controls {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .filter-toggle-container {
+                gap: 0.3rem;
+            }
+
+            .filter-toggle-label {
+                font-size: 0.75rem;
+            }
+
             .fullscreen-close-btn {
                 top: 10px;
                 right: 10px;
@@ -1214,7 +1234,18 @@
                 </div>
                 <div class="profile-username" id="profile-username">Username</div>
                 <div class="profile-join-date" id="profile-join-date">Joined January 2024</div>
-                <button class="profile-logout-btn" id="logout-btn">Logout</button>
+                <!-- Updated: Controls now on same line -->
+                <div class="profile-controls">
+                    <button class="profile-logout-btn" id="logout-btn">Logout</button>
+                    <div class="filter-toggle-container">
+                        <div class="toggle-switch" id="hide-disliked-toggle">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <label class="filter-toggle-label" for="hide-disliked-toggle">
+                            hide left swipes
+                        </label>
+                    </div>
+                </div>
             </div>
             <div class="profile-stats">
                 <div class="stat">
@@ -1222,17 +1253,6 @@
                     <span class="stat-label alternating-text">
                         <span class="green">F</span><span class="purple">l</span><span class="green">i</span><span class="purple">p</span><span class="green">r</span> <span class="purple">s</span><span class="green">c</span><span class="purple">o</span><span class="green">r</span><span class="purple">e</span>
                     </span>
-                </div>
-            </div>
-            <!-- NEW: Filter Controls Section -->
-            <div class="profile-filter-controls">
-                <div class="filter-toggle-container">
-                    <label class="filter-toggle-label" for="hide-disliked-toggle">
-                        Hide posts I disliked
-                    </label>
-                    <div class="toggle-switch" id="hide-disliked-toggle">
-                        <div class="toggle-slider"></div>
-                    </div>
                 </div>
             </div>
             <div class="profile-posts">
@@ -1658,16 +1678,14 @@
             const isOwnProfile = currentUser && userId === currentUser.uid;
             changePhotoBtn.style.display = isOwnProfile ? 'flex' : 'none';
             
-            // Show/hide logout button - only show on user's own profile
+            // Show/hide logout button and toggle - only show on user's own profile
             const logoutBtn = document.getElementById('logout-btn');
+            const profileControls = document.querySelector('.profile-controls');
             if (logoutBtn) {
                 logoutBtn.style.display = isOwnProfile ? 'block' : 'none';
             }
-            
-            // NEW: Show/hide filter controls - only show on user's own profile
-            const filterControls = document.querySelector('.profile-filter-controls');
-            if (filterControls) {
-                filterControls.style.display = isOwnProfile ? 'block' : 'none';
+            if (profileControls) {
+                profileControls.style.display = isOwnProfile ? 'flex' : 'none';
             }
             
             // Get user data and posts
