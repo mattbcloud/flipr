@@ -57,6 +57,34 @@
             border-bottom: 1px solid var(--primary-color);
         }
 
+        .header-center {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+        }
+
+        .leaderboard-link {
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: transform 0.2s, text-shadow 0.2s;
+            user-select: none;
+        }
+
+        .leaderboard-link:hover {
+            transform: scale(1.05);
+        }
+
+        .leaderboard-link:hover .alternating-text .green {
+            text-shadow: 0 0 15px rgba(57, 255, 20, 0.9);
+        }
+
+        .leaderboard-link:hover .alternating-text .purple {
+            text-shadow: 0 0 15px rgba(255, 16, 240, 0.9);
+        }
+
         header h1 {
             color: var(--primary-color);
             font-size: 1.5rem;
@@ -961,6 +989,106 @@
             gap: 0.3rem;
         }
 
+        .leaderboard-post-card {
+            background-color: rgba(17, 17, 17, 0.5);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .leaderboard-post-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(57, 255, 20, 0.3);
+        }
+
+        .leaderboard-rank {
+            font-size: 2rem;
+            font-weight: bold;
+            width: 40px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .leaderboard-rank.rank-1 {
+            color: #FFD700; /* Gold */
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+        }
+
+        .leaderboard-rank.rank-2 {
+            color: #C0C0C0; /* Silver */
+            text-shadow: 0 0 10px rgba(192, 192, 192, 0.7);
+        }
+
+        .leaderboard-rank.rank-3 {
+            color: #CD7F32; /* Bronze */
+            text-shadow: 0 0 10px rgba(205, 127, 50, 0.7);
+        }
+
+        .leaderboard-rank.rank-4,
+        .leaderboard-rank.rank-5 {
+            color: var(--secondary-color);
+            text-shadow: 0 0 8px rgba(255, 16, 240, 0.6);
+        }
+
+        .leaderboard-post-content {
+            flex: 1;
+            min-width: 0; /* Allow text truncation */
+        }
+
+        .leaderboard-post-header {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .leaderboard-post-author {
+            font-weight: 600;
+            color: var(--secondary-color);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .leaderboard-post-author:hover {
+            color: var(--primary-color);
+        }
+
+        .leaderboard-post-time {
+            font-size: 0.8rem;
+            color: var(--secondary-text);
+        }
+
+        .leaderboard-post-text {
+            color: var(--text-color);
+            line-height: 1.4;
+            margin-bottom: 0.5rem;
+        }
+
+        .leaderboard-post-score {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+        }
+
+        .leaderboard-score-highlight {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+            font-size: 1.1rem;
+            text-shadow: none;
+        }
+
         .swipe-right-arrow {
             color: var(--primary-color);
             text-shadow: 0 0 8px rgba(57, 255, 20, 0.8);
@@ -1094,6 +1222,10 @@
                 font-size: 1.2rem;
             }
 
+            .leaderboard-link {
+                font-size: 0.9rem;
+            }
+
             .profile-content {
                 width: 95%;
                 max-height: 85vh;
@@ -1129,6 +1261,22 @@
             .fullscreen-close-btn {
                 top: 10px;
                 right: 10px;
+            }
+
+            .leaderboard-post-card {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: flex-start;
+            }
+
+            .leaderboard-post-header {
+                gap: 0.5rem;
+            }
+
+            .leaderboard-rank {
+                font-size: 1.5rem;
+                width: auto;
+                margin-bottom: 0.5rem;
             }
         }
         
@@ -1221,6 +1369,26 @@
         </div>
     </div>
 
+    <!-- Leaderboard Modal -->
+    <div id="leaderboard-modal" class="profile-modal hidden">
+        <div class="profile-content">
+            <button class="close-profile" id="close-leaderboard">×</button>
+            <div class="profile-header">
+                <div class="profile-username alternating-text" style="font-size: 1.8rem; margin-bottom: 0.5rem;">
+                    <span class="green">T</span><span class="purple">o</span><span class="green">p</span> 
+                    <span class="purple">5</span> 
+                    <span class="green">L</span><span class="purple">e</span><span class="green">a</span><span class="purple">d</span><span class="green">e</span><span class="purple">r</span><span class="green">b</span><span class="purple">o</span><span class="green">a</span><span class="purple">r</span><span class="green">d</span>
+                </div>
+                <div class="profile-join-date">Top ranked posts by Flipr score</div>
+            </div>
+            <div class="profile-posts">
+                <div id="leaderboard-posts-container">
+                    <!-- Top posts will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Profile Modal -->
     <div id="profile-modal" class="profile-modal hidden">
         <div class="profile-content">
@@ -1286,6 +1454,13 @@
     <div id="app-interface" class="hidden">
         <header>
             <h1><span style="color: #39FF14;">F</span><span style="color: #FF10F0;">l</span><span style="color: #39FF14;">i</span><span style="color: #FF10F0;">p</span><span style="color: #39FF14;">r</span></h1>
+            <div class="header-center">
+                <div id="leaderboard-link" class="leaderboard-link">
+                    <span class="alternating-text">
+                        <span class="green">L</span><span class="purple">e</span><span class="green">a</span><span class="purple">d</span><span class="green">e</span><span class="purple">r</span><span class="green">b</span><span class="purple">o</span><span class="green">a</span><span class="purple">r</span><span class="green">d</span>
+                    </span>
+                </div>
+            </div>
             <div class="user-info">
                 <div id="user-profile-pic" class="profile-pic">A</div>
             </div>
@@ -1392,6 +1567,12 @@
         const profileJoinDate = document.getElementById('profile-join-date');
         const userScore = document.getElementById('user-score');
         const userPostsContainer = document.getElementById('user-posts-container');
+        
+        // Leaderboard Modal Elements
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const leaderboardLink = document.getElementById('leaderboard-link');
+        const closeLeaderboardBtn = document.getElementById('close-leaderboard');
+        const leaderboardPostsContainer = document.getElementById('leaderboard-posts-container');
         
         // NEW: Filter Toggle Elements
         const hideDislikedToggle = document.getElementById('hide-disliked-toggle');
@@ -1631,8 +1812,9 @@
                 return;
             }
             
-            // Close profile modal
+            // Close all modals
             closeProfile();
+            closeLeaderboard();
             
             // Set this post as the current post
             currentPost = post;
@@ -1917,9 +2099,113 @@
         function closeProfile() {
             profileModal.classList.add('hidden');
             // Restore body scrolling if no other modals are open
-            if (fullscreenImageModal.classList.contains('hidden') && photoPreviewModal.classList.contains('hidden')) {
+            if (fullscreenImageModal.classList.contains('hidden') && photoPreviewModal.classList.contains('hidden') && leaderboardModal.classList.contains('hidden')) {
                 document.body.style.overflow = '';
             }
+        }
+
+        // Leaderboard Modal Functions
+        function showLeaderboard() {
+            console.log('🏆 Opening leaderboard');
+            showLoading();
+            
+            // Get top 5 posts by score
+            const topPosts = getTopPosts(5);
+            
+            if (topPosts.length === 0) {
+                leaderboardPostsContainer.innerHTML = '<div class="no-posts">No posts available for leaderboard</div>';
+            } else {
+                displayLeaderboardPosts(topPosts);
+            }
+            
+            leaderboardModal.classList.remove('hidden');
+            hideLoading();
+        }
+
+        function closeLeaderboard() {
+            leaderboardModal.classList.add('hidden');
+            // Restore body scrolling if no other modals are open
+            if (fullscreenImageModal.classList.contains('hidden') && photoPreviewModal.classList.contains('hidden') && profileModal.classList.contains('hidden')) {
+                document.body.style.overflow = '';
+            }
+        }
+
+        function getTopPosts(limit = 5) {
+            // Sort all posts by score (likes - dislikes) in descending order
+            const sortedPosts = [...allPosts].sort((a, b) => {
+                const scoreA = (a.likes || 0) - (a.dislikes || 0);
+                const scoreB = (b.likes || 0) - (b.dislikes || 0);
+                return scoreB - scoreA;
+            });
+            
+            return sortedPosts.slice(0, limit);
+        }
+
+        function displayLeaderboardPosts(posts) {
+            leaderboardPostsContainer.innerHTML = '';
+
+            posts.forEach((post, index) => {
+                const postElement = createLeaderboardPostElement(post, index + 1);
+                leaderboardPostsContainer.appendChild(postElement);
+            });
+        }
+
+        function createLeaderboardPostElement(post, rank) {
+            const postElement = document.createElement('div');
+            postElement.className = 'leaderboard-post-card';
+            postElement.setAttribute('data-post-id', post.id);
+
+            const postDate = new Date(post.timestamp);
+            const timeAgo = getTimeAgo(postDate);
+            
+            const likes = post.likes || 0;
+            const dislikes = post.dislikes || 0;
+            const score = likes - dislikes;
+            const comments = post.comments ? Object.keys(post.comments).length : 0;
+
+            // Truncate text if too long
+            let displayText = post.text || '';
+            if (displayText.length > 120) {
+                displayText = displayText.substring(0, 120) + '...';
+            }
+
+            // Determine rank class for styling
+            const rankClass = `rank-${rank}`;
+
+            postElement.innerHTML = `
+                <div class="leaderboard-rank ${rankClass}">${rank}</div>
+                <div class="post-profile-pic" data-user-id="${post.authorId}" data-username="${post.author}"></div>
+                <div class="leaderboard-post-content">
+                    <div class="leaderboard-post-header">
+                        <span class="leaderboard-post-author" data-user-id="${post.authorId}" data-username="${post.author}">${post.author}</span>
+                        <span class="leaderboard-post-time">${timeAgo}</span>
+                    </div>
+                    <div class="leaderboard-post-text">${displayText}</div>
+                    <div class="leaderboard-post-score">
+                        <div class="profile-post-stat">
+                            <span class="swipe-left-arrow">←</span>
+                            <span>${dislikes}</span>
+                        </div>
+                        <div class="profile-post-stat">
+                            <span class="swipe-right-arrow">→</span>
+                            <span>${likes}</span>
+                        </div>
+                        <div class="profile-post-stat">
+                            <span>💬</span>
+                            <span>${comments}</span>
+                        </div>
+                        <div class="profile-post-stat">
+                            <span class="leaderboard-score-highlight">⚡ ${score}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Update the profile picture after creating the element
+            const profilePicElement = postElement.querySelector('.post-profile-pic');
+            fetchAuthorProfilePicture(post.authorId, post.author, profilePicElement);
+
+            return postElement;
         }
 
         // Photo Upload Functions
@@ -2128,6 +2414,9 @@
             if (!photoPreviewModal.classList.contains('hidden')) {
                 cancelPhotoUpload();
             }
+            if (!leaderboardModal.classList.contains('hidden')) {
+                closeLeaderboard();
+            }
             
             // Show the modal first
             fullscreenImageModal.classList.remove('hidden');
@@ -2188,7 +2477,7 @@
             fullscreenImage.alt = '';
             
             // Restore body scrolling if no other modals are open
-            if (profileModal.classList.contains('hidden') && photoPreviewModal.classList.contains('hidden')) {
+            if (profileModal.classList.contains('hidden') && photoPreviewModal.classList.contains('hidden') && leaderboardModal.classList.contains('hidden')) {
                 document.body.style.overflow = '';
             }
         }
@@ -2200,6 +2489,10 @@
                 showProfile(currentUser.uid, currentUser.username);
             }
         });
+
+        // Leaderboard event listeners
+        leaderboardLink.addEventListener('click', showLeaderboard);
+        closeLeaderboardBtn.addEventListener('click', closeLeaderboard);
 
         // NEW: Toggle event listener
         hideDislikedToggle.addEventListener('click', toggleHideDislikedPosts);
@@ -2240,6 +2533,12 @@
         profileModal.addEventListener('click', (e) => {
             if (e.target === profileModal) {
                 closeProfile();
+            }
+        });
+
+        leaderboardModal.addEventListener('click', (e) => {
+            if (e.target === leaderboardModal) {
+                closeLeaderboard();
             }
         });
 
@@ -2505,6 +2804,11 @@
             // Close profile modal if it's open
             if (!profileModal.classList.contains('hidden')) {
                 closeProfile();
+            }
+            
+            // Close leaderboard modal if it's open
+            if (!leaderboardModal.classList.contains('hidden')) {
+                closeLeaderboard();
             }
             
             showLoading();
@@ -3610,6 +3914,18 @@
                 
                 if (postId) {
                     console.log('🎯 Profile post clicked:', postId);
+                    openPostInFeed(postId);
+                    return; // Stop event propagation
+                }
+            }
+
+            // NEW: Leaderboard post click handling
+            if (e.target.closest('.leaderboard-post-card[data-post-id]')) {
+                const postCard = e.target.closest('.leaderboard-post-card[data-post-id]');
+                const postId = postCard.getAttribute('data-post-id');
+                
+                if (postId) {
+                    console.log('🏆 Leaderboard post clicked:', postId);
                     openPostInFeed(postId);
                     return; // Stop event propagation
                 }
