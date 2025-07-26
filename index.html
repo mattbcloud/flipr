@@ -1042,6 +1042,23 @@
             text-shadow: 0 0 8px rgba(255, 16, 240, 0.6);
         }
 
+        /* NEW: Extended rank styling for all posts */
+        .leaderboard-rank.rank-6,
+        .leaderboard-rank.rank-7,
+        .leaderboard-rank.rank-8,
+        .leaderboard-rank.rank-9,
+        .leaderboard-rank.rank-10 {
+            color: var(--primary-color);
+            text-shadow: 0 0 6px rgba(57, 255, 20, 0.5);
+            font-size: 1.8rem;
+        }
+
+        .leaderboard-rank.rank-other {
+            color: var(--text-color);
+            text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+            font-size: 1.6rem;
+        }
+
         .leaderboard-post-content {
             flex: 1;
             min-width: 0; /* Allow text truncation */
@@ -1092,6 +1109,16 @@
             font-weight: bold;
             font-size: 1.1rem;
             text-shadow: none;
+        }
+
+        /* NEW: Leaderboard posts counter */
+        .leaderboard-posts-counter {
+            text-align: center;
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .swipe-right-arrow {
@@ -1414,13 +1441,13 @@
             <button class="close-profile" id="close-leaderboard">×</button>
             <div class="profile-header">
                 <div class="profile-username alternating-text" style="font-size: 1.8rem; margin-bottom: 0.5rem;">
-                    <span class="green">F</span><span class="purple">l</span><span class="green">i</span><span class="purple">p</span><span class="green">r</span> <span class="purple">5</span>
+                    <span class="green">F</span><span class="purple">l</span><span class="green">i</span><span class="purple">p</span><span class="green">r</span> <span class="purple">L</span><span class="green">e</span><span class="purple">a</span><span class="green">d</span><span class="purple">e</span><span class="green">r</span><span class="purple">b</span><span class="green">o</span><span class="purple">a</span><span class="green">r</span><span class="purple">d</span>
                 </div>
-                <div class="profile-join-date">Top ranked posts by Flipr score</div>
+                <div class="profile-join-date">All posts ranked by Flipr score</div>
             </div>
             <div class="profile-posts">
                 <div id="leaderboard-posts-container">
-                    <!-- Top posts will be loaded here -->
+                    <!-- All posts will be loaded here -->
                 </div>
             </div>
         </div>
@@ -2149,8 +2176,8 @@
             console.log('🏆 Opening leaderboard');
             showLoading();
             
-            // Get top 5 posts by score
-            const topPosts = getTopPosts(5);
+            // Get ALL posts by score (no limit)
+            const topPosts = getTopPosts(); // No limit parameter = all posts
             
             if (topPosts.length === 0) {
                 leaderboardPostsContainer.innerHTML = '<div class="no-posts">No posts available for leaderboard</div>';
@@ -2170,7 +2197,8 @@
             }
         }
 
-        function getTopPosts(limit = 5) {
+        // UPDATED: Modified to return all posts when no limit is specified
+        function getTopPosts(limit = null) {
             // Sort all posts by score (likes - dislikes) in descending order
             const sortedPosts = [...allPosts].sort((a, b) => {
                 const scoreA = (a.likes || 0) - (a.dislikes || 0);
@@ -2178,9 +2206,11 @@
                 return scoreB - scoreA;
             });
             
-            return sortedPosts.slice(0, limit);
+            // If limit is specified, return only that many posts, otherwise return all
+            return limit ? sortedPosts.slice(0, limit) : sortedPosts;
         }
 
+        // UPDATED: Display all leaderboard posts with enhanced ranking
         function displayLeaderboardPosts(posts) {
             leaderboardPostsContainer.innerHTML = '';
 
@@ -2190,6 +2220,7 @@
             });
         }
 
+        // UPDATED: Enhanced ranking visual for all posts
         function createLeaderboardPostElement(post, rank) {
             const postElement = document.createElement('div');
             postElement.className = 'leaderboard-post-card';
@@ -2209,8 +2240,17 @@
                 displayText = displayText.substring(0, 120) + '...';
             }
 
-            // Determine rank class for styling
-            const rankClass = `rank-${rank}`;
+            // Determine rank class for styling with extended categories
+            let rankClass = '';
+            if (rank <= 3) {
+                rankClass = `rank-${rank}`; // Gold, Silver, Bronze
+            } else if (rank <= 5) {
+                rankClass = `rank-${rank}`; // Special styling for 4th and 5th
+            } else if (rank <= 10) {
+                rankClass = `rank-${rank}`; // Green styling for top 10
+            } else {
+                rankClass = 'rank-other'; // Default styling for rest
+            }
 
             postElement.innerHTML = `
                 <div class="leaderboard-rank ${rankClass}">${rank}</div>
@@ -3328,8 +3368,7 @@
             // Get next post from queue
             currentPost = viewingQueue.shift();
             
-            // Only increment cycle index if we're actually advancing through posts
-            // Don't increment every time, just when queue gets rebuilt
+            // Only increment cycle index when queue gets rebuilt
             
             const score = (currentPost.likes || 0) - (currentPost.dislikes || 0);
             console.log(`👀 Showing post: ${currentPost.author} (score: ${score}, queue: ${viewingQueue.length} remaining, cycle: ${currentCycleIndex}/${allPosts.length})`);
@@ -4419,9 +4458,6 @@
                 profilePictureCache.clear();
             }
         }
-    </script>
-</body>
-</html>
     </script>
 </body>
 </html>
