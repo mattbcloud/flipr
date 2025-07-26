@@ -1800,14 +1800,31 @@
             }
         }
 
-        // NEW: Function to load user's disliked posts from their profile
+        // NEW: Refresh user's disliked posts cache from Firebase
+        function refreshUserDislikedPosts() {
+            if (!currentUser) return Promise.resolve();
+            
+            return loadUserDislikedPosts(currentUser.uid).then(dislikedPosts => {
+                const oldCount = userDislikedPosts.size;
+                userDislikedPosts = dislikedPosts;
+                const newCount = userDislikedPosts.size;
+                
+                console.log(`🔄 Refreshed disliked posts cache: ${oldCount} → ${newCount}`);
+                return dislikedPosts;
+            });
+        }
         async function loadUserDislikedPosts(userId) {
             if (!userId) return new Set();
             
             try {
                 const snapshot = await usersRef.child(`${userId}/dislikedPosts`).once('value');
                 const dislikedData = snapshot.val() || {};
-                return new Set(Object.keys(dislikedData));
+                
+                // Only include posts where the value is true (filter out null/deleted entries)
+                const currentlyDislikedPosts = Object.keys(dislikedData).filter(postId => dislikedData[postId] === true);
+                
+                console.log(`📋 Loaded ${currentlyDislikedPosts.length} currently disliked posts (filtered from ${Object.keys(dislikedData).length} total entries)`);
+                return new Set(currentlyDislikedPosts);
             } catch (error) {
                 console.error('Error loading user disliked posts:', error);
                 return new Set();
@@ -3299,17 +3316,17 @@
             // Filter posts based on user preferences
             let availablePosts = allPosts;
             
-            // NEW: Filter out disliked posts if toggle is enabled
+            // NEW: Filter out posts based on user's CURRENT final vote (not voting history)
             if (hideDislikedPosts && currentUser) {
                 availablePosts = allPosts.filter(post => {
-                    const isDisliked = userDislikedPosts.has(post.id);
-                    if (isDisliked) {
-                        console.log(`🚫 Filtering out disliked post: ${post.author} (${post.id.substring(0, 8)})`);
+                    const isCurrentlyDisliked = userDislikedPosts.has(post.id);
+                    if (isCurrentlyDisliked) {
+                        console.log(`🚫 Hiding post with final dislike vote: ${post.author} (${post.id.substring(0, 8)})`);
                     }
-                    return !isDisliked;
+                    return !isCurrentlyDisliked; // Only hide posts where user's FINAL vote is dislike
                 });
                 
-                console.log(`🔍 Filtered posts: ${allPosts.length} → ${availablePosts.length} (hide disliked: ${hideDislikedPosts})`);
+                console.log(`🔍 Hide disliked filter: ${allPosts.length} → ${availablePosts.length} posts (${userDislikedPosts.size} currently disliked)`);
             }
             
             if (availablePosts.length === 0) {
@@ -3860,84 +3877,209 @@
             return postCard;
         }
         
-        // NEW: Enhanced Handle Post Like with user interaction tracking
+        // NEW: Show brief feedback message to user
+        function showVoteFeedback(message, type = 'info') {
+            // Remove any existing feedback
+            const existingFeedback = document.querySelector('.vote-feedback');
+            if (existingFeedback) {
+                existingFeedback.remove();
+            }
+            
+            // Create feedback element
+            const feedback = document.createElement('div');
+            feedback.className = 'vote-feedback';
+            feedback.textContent = message;
+            feedback.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: ${type === 'warning' ? 'var(--secondary-color)' : 'var(--primary-color)'};
+                color: white;
+                padding: 0.8rem 1.5rem;
+                border-radius: 8px;
+                font-weight: 600;
+                z-index: 2500;
+                box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+                animation: fadeInOut 2s ease;
+                pointer-events: none;
+            `;
+            
+            // Add animation keyframes if not already added
+            if (!document.querySelector('#vote-feedback-styles')) {
+                const style = document.createElement('style');
+                style.id = 'vote-feedback-styles';
+                style.textContent = `
+                    @keyframes fadeInOut {
+                        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                        20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                        80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                        100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(feedback);
+            
+            // Remove after animation
+            setTimeout(() => {
+                if (feedback.parentNode) {
+                    feedback.remove();
+                }
+            }, 2000);
+        }
         function handlePostLike(postId) {
             if (!currentUser) {
                 alert('Please log in to like posts');
                 return;
             }
             
-            const postRef = postsRef.child(postId);
+            console.log('👍 Processing like for post:', postId.substring(0, 8));
             
-            // Use a transaction to ensure likes are updated atomically
-            postRef.child('likes').transaction((currentLikes) => {
-                return (currentLikes || 0) + 1;
-            }).then(() => {
-                // Track user interaction in user's profile
-                const userLikeRef = usersRef.child(`${currentUser.uid}/likedPosts/${postId}`);
-                userLikeRef.set(true);
+            // Check user's current vote status
+            Promise.all([
+                usersRef.child(`${currentUser.uid}/likedPosts/${postId}`).once('value'),
+                usersRef.child(`${currentUser.uid}/dislikedPosts/${postId}`).once('value')
+            ]).then(([likedSnapshot, dislikedSnapshot]) => {
+                const hasLiked = likedSnapshot.exists();
+                const hasDisliked = dislikedSnapshot.exists();
                 
-                // NEW: If this post was previously disliked, remove it from disliked posts
-                // This "undoes" the dislike and makes the post visible in feed again
-                if (userDislikedPosts.has(postId)) {
-                    console.log('🔄 Undoing previous dislike for post:', postId.substring(0, 8));
-                    
-                    // Remove from Firebase
-                    const userDislikeRef = usersRef.child(`${currentUser.uid}/dislikedPosts/${postId}`);
-                    userDislikeRef.remove();
-                    
-                    // Remove from local cache
-                    userDislikedPosts.delete(postId);
-                    
-                    // Refresh the viewing queue so this post can appear again
-                    if (hideDislikedPosts) {
-                        console.log('🔄 Refreshing queue to show previously disliked post');
-                        refreshViewingQueue();
-                    }
+                if (hasLiked) {
+                    console.log('⚠️ User already liked this post');
+                    return; // User already liked this post, do nothing
                 }
                 
-                console.log('👍 Post liked and interaction tracked:', postId.substring(0, 8));
-            }).catch((error) => {
-                handleFirebaseError(error);
-            });
+                const postRef = postsRef.child(postId);
+                
+                if (hasDisliked) {
+                    // User is changing from dislike to like
+                    console.log('🔄 Changing vote from dislike to like');
+                    
+                    // Use transactions to update both counters atomically
+                    Promise.all([
+                        postRef.child('likes').transaction((currentLikes) => (currentLikes || 0) + 1),
+                        postRef.child('dislikes').transaction((currentDislikes) => Math.max((currentDislikes || 0) - 1, 0))
+                    ]).then(() => {
+                        // Update user's vote records - properly remove the dislike entry
+                        const likeRef = usersRef.child(`${currentUser.uid}/likedPosts/${postId}`);
+                        const dislikeRef = usersRef.child(`${currentUser.uid}/dislikedPosts/${postId}`);
+                        
+                        return Promise.all([
+                            likeRef.set(true),
+                            dislikeRef.remove() // Properly delete the dislike entry
+                        ]);
+                    }).then(() => {
+                        // Update local cache and refresh to ensure accuracy
+                        userDislikedPosts.delete(postId);
+                        
+                        // Refresh cache from Firebase to ensure accuracy
+                        refreshUserDislikedPosts().then(() => {
+                            // Refresh viewing queue if hide disliked is enabled
+                            if (hideDislikedPosts) {
+                                console.log('🔄 Refreshing queue after vote change to show previously hidden post');
+                                refreshViewingQueue();
+                            }
+                        });
+                        
+                        console.log('✅ Vote changed from dislike to like, dislike entry removed');
+                    }).catch(handleFirebaseError);
+                    
+                } else {
+                    // User is liking for the first time
+                    console.log('➕ New like vote');
+                    
+                    postRef.child('likes').transaction((currentLikes) => {
+                        return (currentLikes || 0) + 1;
+                    }).then(() => {
+                        // Track user's like
+                        return usersRef.child(`${currentUser.uid}/likedPosts/${postId}`).set(true);
+                    }).then(() => {
+                        console.log('✅ New like recorded');
+                    }).catch(handleFirebaseError);
+                }
+            }).catch(handleFirebaseError);
         }
         
-        // NEW: Enhanced Handle Post Dislike with user interaction tracking
+        // NEW: Enhanced Handle Post Dislike with single-vote system
         function handlePostDislike(postId) {
             if (!currentUser) {
                 alert('Please log in to dislike posts');
                 return;
             }
             
-            const postRef = postsRef.child(postId);
+            console.log('👎 Processing dislike for post:', postId.substring(0, 8));
             
-            // Use a transaction to ensure dislikes are updated atomically
-            postRef.child('dislikes').transaction((currentDislikes) => {
-                return (currentDislikes || 0) + 1;
-            }).then(() => {
-                // Track user interaction in user's profile
-                const userDislikeRef = usersRef.child(`${currentUser.uid}/dislikedPosts/${postId}`);
-                userDislikeRef.set(true);
+            // Check user's current vote status
+            Promise.all([
+                usersRef.child(`${currentUser.uid}/likedPosts/${postId}`).once('value'),
+                usersRef.child(`${currentUser.uid}/dislikedPosts/${postId}`).once('value')
+            ]).then(([likedSnapshot, dislikedSnapshot]) => {
+                const hasLiked = likedSnapshot.exists();
+                const hasDisliked = dislikedSnapshot.exists();
                 
-                // Update local cache
-                userDislikedPosts.add(postId);
+                if (hasDisliked) {
+                    console.log('⚠️ User already disliked this post');
+                    return; // User already disliked this post, do nothing
+                }
                 
-                console.log('👎 Post disliked and interaction tracked:', postId.substring(0, 8));
-            }).catch((error) => {
-                handleFirebaseError(error);
-            });
+                const postRef = postsRef.child(postId);
+                
+                if (hasLiked) {
+                    // User is changing from like to dislike
+                    console.log('🔄 Changing vote from like to dislike');
+                    
+                    // Use transactions to update both counters atomically
+                    Promise.all([
+                        postRef.child('dislikes').transaction((currentDislikes) => (currentDislikes || 0) + 1),
+                        postRef.child('likes').transaction((currentLikes) => Math.max((currentLikes || 0) - 1, 0))
+                    ]).then(() => {
+                        // Update user's vote records - properly remove the like entry
+                        const dislikeRef = usersRef.child(`${currentUser.uid}/dislikedPosts/${postId}`);
+                        const likeRef = usersRef.child(`${currentUser.uid}/likedPosts/${postId}`);
+                        
+                        return Promise.all([
+                            dislikeRef.set(true),
+                            likeRef.remove() // Properly delete the like entry
+                        ]);
+                    }).then(() => {
+                        // Update local cache and refresh to ensure accuracy
+                        userDislikedPosts.add(postId);
+                        
+                        // Refresh cache from Firebase to ensure accuracy
+                        refreshUserDislikedPosts();
+                        
+                        console.log('✅ Vote changed from like to dislike, like entry removed');
+                    }).catch(handleFirebaseError);
+                    
+                } else {
+                    // User is disliking for the first time
+                    console.log('➕ New dislike vote');
+                    
+                    postRef.child('dislikes').transaction((currentDislikes) => {
+                        return (currentDislikes || 0) + 1;
+                    }).then(() => {
+                        // Track user's dislike
+                        return usersRef.child(`${currentUser.uid}/dislikedPosts/${postId}`).set(true);
+                    }).then(() => {
+                        // Update local cache
+                        userDislikedPosts.add(postId);
+                        
+                        console.log('✅ New dislike recorded');
+                    }).catch(handleFirebaseError);
+                }
+            }).catch(handleFirebaseError);
             
-            // Add this post to the recently disliked set (using Set for better performance)
+            // Add this post to the recently disliked set for feed management
             recentlyDisliked.add(postId);
             
             // Limit recently disliked to prevent too many posts being filtered out
-            if (recentlyDisliked.size > 5) { // Reduced from 8 to 5
-                // Remove oldest entries - convert to array, remove first, convert back
+            if (recentlyDisliked.size > 5) {
                 const dislikedArray = Array.from(recentlyDisliked);
                 recentlyDisliked.delete(dislikedArray[0]);
             }
             
-            console.log(`👎 Post disliked, recently disliked count: ${recentlyDisliked.size}`);
+            console.log(`📝 Post added to recently disliked, count: ${recentlyDisliked.size}`);
         }
         
         // Helper function to format time
@@ -4398,30 +4540,46 @@
             recentlyDisliked.clear();
             // Clear profile picture cache to get fresh data
             profilePictureCache.clear();
-            // Clear user disliked posts to get fresh data
-            userDislikedPosts = new Set();
+            
+            // Refresh user's disliked posts from Firebase before refreshing feed
             if (currentUser) {
-                loadUserDislikedPosts(currentUser.uid).then(dislikedPosts => {
-                    userDislikedPosts = dislikedPosts;
+                refreshUserDislikedPosts().then(() => {
+                    refreshViewingQueue();
+                    showNextPost();
+                    console.log('✅ Feed refreshed manually with updated dislike filter');
                 });
+            } else {
+                refreshViewingQueue();
+                showNextPost();
+                console.log('✅ Feed refreshed manually');
             }
-            refreshViewingQueue();
-            showNextPost();
-            console.log('✅ Feed refreshed manually');
         };
 
-        // NEW: Debug function to check disliked posts
+        // NEW: Debug function to check disliked posts and verify filtering
         window.checkDislikedPosts = function() {
-            console.log('📋 User disliked posts:', Array.from(userDislikedPosts));
+            console.log('📋 User currently disliked posts:', Array.from(userDislikedPosts));
             console.log('🔧 Hide disliked posts enabled:', hideDislikedPosts);
+            
             if (currentUser) {
-                loadUserDislikedPosts(currentUser.uid).then(dislikedPosts => {
-                    console.log('📦 Fresh disliked posts from Firebase:', Array.from(dislikedPosts));
+                // Check both liked and disliked posts to verify vote status
+                Promise.all([
+                    loadUserDislikedPosts(currentUser.uid),
+                    usersRef.child(`${currentUser.uid}/likedPosts`).once('value')
+                ]).then(([dislikedPosts, likedSnapshot]) => {
+                    const likedData = likedSnapshot.val() || {};
+                    const likedPosts = Object.keys(likedData).filter(postId => likedData[postId] === true);
+                    
+                    console.log('📦 Fresh data from Firebase:');
+                    console.log('   Currently disliked posts:', Array.from(dislikedPosts));
+                    console.log('   Currently liked posts:', likedPosts);
+                    console.log('   Overlap (should be empty):', likedPosts.filter(postId => dislikedPosts.has(postId)));
                 });
+                
                 loadHideDislikedSetting(currentUser.uid).then(setting => {
                     console.log('💾 Saved hide disliked setting from Firebase:', setting);
                 });
             }
+            
             return {
                 userDislikedPosts: Array.from(userDislikedPosts),
                 hideDislikedPosts: hideDislikedPosts,
@@ -4429,7 +4587,43 @@
             };
         };
 
-        // NEW: Debug function to simulate like/dislike for testing
+        // NEW: Debug function to check user's vote status on current post
+        window.checkUserVote = function(postId = null) {
+            if (!currentUser) {
+                console.log('❌ No user logged in');
+                return;
+            }
+            
+            const targetPostId = postId || (currentPost ? currentPost.id : null);
+            if (!targetPostId) {
+                console.log('❌ No post ID provided and no current post');
+                return;
+            }
+            
+            Promise.all([
+                usersRef.child(`${currentUser.uid}/likedPosts/${targetPostId}`).once('value'),
+                usersRef.child(`${currentUser.uid}/dislikedPosts/${targetPostId}`).once('value')
+            ]).then(([likedSnapshot, dislikedSnapshot]) => {
+                const hasLiked = likedSnapshot.exists();
+                const hasDisliked = dislikedSnapshot.exists();
+                
+                console.log(`🗳️ Vote status for post ${targetPostId.substring(0, 8)}:`);
+                console.log(`   Liked: ${hasLiked}`);
+                console.log(`   Disliked: ${hasDisliked}`);
+                console.log(`   No vote: ${!hasLiked && !hasDisliked}`);
+                
+                return {
+                    postId: targetPostId,
+                    hasLiked,
+                    hasDisliked,
+                    noVote: !hasLiked && !hasDisliked
+                };
+            }).catch(error => {
+                console.error('Error checking vote status:', error);
+            });
+        };
+
+        // NEW: Debug function to simulate like/dislike for testing (updated for single-vote system)
         window.simulateSwipe = function(direction) {
             if (!currentPost) {
                 console.log('❌ No current post to swipe on');
@@ -4438,14 +4632,18 @@
             
             console.log(`🧪 Simulating ${direction} swipe on: ${currentPost.author} (${currentPost.id.substring(0, 8)})`);
             
+            // First check current vote status
+            window.checkUserVote(currentPost.id);
+            
             if (direction === 'left') {
                 handlePostDislike(currentPost.id);
             } else if (direction === 'right') {
                 handlePostLike(currentPost.id);
             }
             
-            // Go to next post after a delay to see the effect
+            // Check vote status after a delay to see the change
             setTimeout(() => {
+                window.checkUserVote(currentPost.id);
                 goToNextPost();
             }, 1000);
         };
