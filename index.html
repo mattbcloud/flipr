@@ -357,6 +357,18 @@
             border-radius: 4px;
         }
 
+        /* YouTube embed styles */
+        .youtube-embed-container {
+            margin: 0.5rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .youtube-embed-container iframe {
+            border-radius: 8px;
+        }
+
         .post-stats {
             display: flex;
             justify-content: space-between;
@@ -1344,6 +1356,11 @@
                 height: 35px;
                 font-size: 1rem;
             }
+
+            /* YouTube embeds on mobile */
+            .youtube-embed-container {
+                margin: 0.5rem 0;
+            }
         }
         
         @keyframes highlight {
@@ -1391,7 +1408,7 @@
                 <br><br>
                 Flip left to say, no way.
                 <br><br>
-                Post text, pics and videos. 
+                Post text, pics, videos, and YouTube links. 
                 <br><br>
                 All content destroyed after 7 days. 
                 <br><br>     
@@ -1800,14 +1817,61 @@
             }
         }
 
-        // Helper function to make URLs clickable in text
+        // Helper function to extract YouTube video ID from URL
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            
+            // YouTube URL patterns
+            const patterns = [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/
+            ];
+            
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) {
+                    return match[1];
+                }
+            }
+            return null;
+        }
+
+        // Helper function to detect YouTube URLs in text and extract them
+        function extractYouTubeFromText(text) {
+            if (!text) return { cleanText: text, youtubeId: null, youtubeUrl: null };
+            
+            // YouTube URL patterns - more comprehensive
+            const youtubePattern = /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})(\S*)?/gi;
+            
+            let youtubeUrl = null;
+            let youtubeId = null;
+            
+            // Find the first YouTube URL
+            const match = text.match(youtubePattern);
+            if (match && match[0]) {
+                youtubeUrl = match[0];
+                youtubeId = extractYouTubeId(youtubeUrl);
+                
+                // Remove the YouTube URL from the text
+                const cleanText = text.replace(youtubePattern, '').trim();
+                
+                return { cleanText, youtubeId, youtubeUrl };
+            }
+            
+            return { cleanText: text, youtubeId: null, youtubeUrl: null };
+        }
+
+        // Helper function to make URLs clickable in text (excluding YouTube URLs which become embeds)
         function linkifyText(text) {
             if (!text) return '';
+            
+            // First remove any YouTube URLs since they'll be handled as embeds
+            const textWithoutYoutube = text.replace(/(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})(\S*)?/gi, '');
             
             // URL regex pattern that matches http, https, www, and basic domain patterns
             const urlPattern = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?)/g;
             
-            return text.replace(urlPattern, function(match) {
+            return textWithoutYoutube.replace(urlPattern, function(match) {
                 let url = match;
                 
                 // Add protocol if missing
@@ -2075,7 +2139,20 @@
             }
 
             let mediaIndicator = '';
-            if (post.videoURL) {
+            if (post.youtubeId) {
+                // For YouTube posts - show thumbnail
+                mediaIndicator = `
+                    <div class="media-indicator">
+                        <div style="position: relative; display: inline-block;">
+                            <img src="https://img.youtube.com/vi/${post.youtubeId}/mqdefault.jpg" alt="YouTube thumbnail" class="post-thumbnail" style="background-color: #333;">
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                                       color: white; font-size: 16px; text-shadow: 0 0 4px rgba(0,0,0,0.8);">▶</div>
+                            <div style="position: absolute; bottom: 2px; right: 2px; background: rgba(255,0,0,0.8); 
+                                       color: white; font-size: 8px; padding: 1px 3px; border-radius: 2px; font-weight: bold;">YT</div>
+                        </div>
+                    </div>
+                `;
+            } else if (post.videoURL) {
                 // For video posts with autoplay
                 mediaIndicator = `
                     <div class="media-indicator">
@@ -3116,12 +3193,15 @@
             
             const text = postTextarea.value.trim();
             
+            // Check for YouTube URLs in the text
+            const { cleanText, youtubeId, youtubeUrl } = extractYouTubeFromText(text);
+            
             // Check media type
             let hasImage = activeMediaType === 'image' && window.selectedImageFile;
             let hasVideo = activeMediaType === 'video' && window.selectedVideoFile;
             
-            if (!text && !hasImage && !hasVideo) {
-                alert('Please add some text, an image, or a video to your post');
+            if (!cleanText && !hasImage && !hasVideo && !youtubeId) {
+                alert('Please add some text, an image, a video, or a YouTube URL to your post');
                 return;
             }
             
@@ -3164,8 +3244,8 @@
                             uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
                                 console.log('Image uploaded successfully. URL:', downloadURL);
                                 
-                                // Now create post with the image URL
-                                createFirebasePost(text, downloadURL, null, null, null);
+                                // Now create post with the image URL and YouTube data
+                                createFirebasePost(cleanText, downloadURL, null, null, null, youtubeId);
                             }).catch(urlError => {
                                 console.error('Error getting download URL:', urlError);
                                 alert('Error completing image upload. Please try again.');
@@ -3235,9 +3315,9 @@
                             uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
                                 console.log('Video uploaded successfully. URL:', downloadURL);
                                 
-                                // Now create post with the video URL
+                                // Now create post with the video URL and YouTube data
                                 const videoDuration = previewVideo.duration || 0;
-                                createFirebasePost(text, null, downloadURL, thumbnailData, videoDuration);
+                                createFirebasePost(cleanText, null, downloadURL, thumbnailData, videoDuration, youtubeId);
                             }).catch(urlError => {
                                 console.error('Error getting download URL:', urlError);
                                 alert('Error completing video upload. Please try again.');
@@ -3253,12 +3333,12 @@
                 return;
             }
             
-            // Just text post
-            createFirebasePost(text, null, null, null, null);
+            // Just text post (possibly with YouTube)
+            createFirebasePost(cleanText, null, null, null, null, youtubeId);
         }
         
         // Create post in Firebase
-        function createFirebasePost(text, imageURL, videoURL, videoThumbnail, videoDuration) {
+        function createFirebasePost(text, imageURL, videoURL, videoThumbnail, videoDuration, youtubeId) {
             // Client-side validation before sending to Firebase
             if (!currentUser) {
                 alert('You must be logged in to create a post');
@@ -3283,6 +3363,7 @@
                 videoURL: videoURL, // Firebase Storage URL for videos
                 videoThumbnail: videoThumbnail,
                 videoDuration: videoDuration,
+                youtubeId: youtubeId || null, // YouTube video ID for embedded videos
                 timestamp: firebase.database.ServerValue.TIMESTAMP,  // Required by security rules
                 likes: 0,
                 dislikes: 0
@@ -3706,13 +3787,26 @@
             
             // Determine what media content to show
             let mediaContent = '';
-            if (post.videoURL) {
-                // For video posts with autoplay
+            if (post.youtubeId) {
+                // YouTube embedded video
+                mediaContent = `
+                    <div class="youtube-embed-container" style="position: relative; width: 100%; height: 0; padding-bottom: 56.25%; /* 16:9 aspect ratio */">
+                        <iframe 
+                            src="https://www.youtube.com/embed/${post.youtubeId}?rel=0&modestbranding=1" 
+                            frameborder="0" 
+                            allowfullscreen
+                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 8px;"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        ></iframe>
+                    </div>
+                `;
+            } else if (post.videoURL) {
+                // Regular uploaded video with autoplay
                 mediaContent = `
                     <video class="post-video" src="${post.videoURL}" controls autoplay muted loop playsinline></video>
                 `;
             } else if (post.image && post.image.trim() !== '') {
-                // For image posts
+                // Image posts
                 mediaContent = `<img class="post-image" src="${post.image}" alt="">`;
             }
             
@@ -3747,15 +3841,27 @@
             // Fetch and update profile picture for this author
             fetchAuthorProfilePicture(post.authorId, post.author, profilePicElement);
             
-            // Add swipe functionality
+            // Add swipe functionality - but prevent it over YouTube iframes
             let startX = 0;
             let currentX = 0;
             let isSwiping = false;
             const swipeThreshold = 10; // Pixels to move before considering it a swipe
             let swipeProcessed = false; // Flag to prevent duplicate processing
             
+            // Function to check if the target is a YouTube iframe or its container
+            function isYouTubeElement(target) {
+                return target.tagName === 'IFRAME' || 
+                       target.closest('.youtube-embed-container') ||
+                       target.classList.contains('youtube-embed-container');
+            }
+            
             // Touch event handling
             postCard.addEventListener('touchstart', function(e) {
+                // Don't start swipe if touching YouTube embed
+                if (isYouTubeElement(e.target)) {
+                    return;
+                }
+                
                 startX = e.touches[0].clientX;
                 currentX = startX; 
                 isSwiping = false;
@@ -3765,6 +3871,11 @@
             
             postCard.addEventListener('touchmove', function(e) {
                 if (swipeProcessed) return;
+                
+                // Don't swipe if moving over YouTube embed
+                if (isYouTubeElement(e.target)) {
+                    return;
+                }
                 
                 currentX = e.touches[0].clientX;
                 const diffX = currentX - startX;
@@ -3837,8 +3948,13 @@
                 }
             });
             
-            // For desktop testing - mouse events
+            // For desktop testing - mouse events (with same YouTube protection)
             postCard.addEventListener('mousedown', function(e) {
+                // Don't start swipe if clicking on YouTube embed
+                if (isYouTubeElement(e.target)) {
+                    return;
+                }
+                
                 startX = e.clientX;
                 currentX = startX;
                 isSwiping = false;
