@@ -1800,6 +1800,26 @@
             }
         }
 
+        // Helper function to make URLs clickable in text
+        function linkifyText(text) {
+            if (!text) return '';
+            
+            // URL regex pattern that matches http, https, www, and basic domain patterns
+            const urlPattern = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?)/g;
+            
+            return text.replace(urlPattern, function(match) {
+                let url = match;
+                
+                // Add protocol if missing
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = 'https://' + url;
+                }
+                
+                // Create clickable link with security attributes
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">${match}</a>`;
+            });
+        }
+
         // NEW: Refresh user's disliked posts cache from Firebase
         function refreshUserDislikedPosts() {
             if (!currentUser) return Promise.resolve();
@@ -2087,7 +2107,7 @@
                     <span>${timeAgo}</span>
                     ${mediaIndicator}
                 </div>
-                <div class="profile-post-text">${displayText}</div>
+                <div class="profile-post-text">${linkifyText(displayText)}</div>
                 <div class="profile-post-stats">
                     <div class="profile-post-stat">
                         <span class="swipe-left-arrow">←</span>
@@ -2277,7 +2297,7 @@
                         <span class="leaderboard-post-author" data-user-id="${post.authorId}" data-username="${post.author}">${post.author}</span>
                         <span class="leaderboard-post-time">${timeAgo}</span>
                     </div>
-                    <div class="leaderboard-post-text">${displayText}</div>
+                    <div class="leaderboard-post-text">${linkifyText(displayText)}</div>
                     <div class="leaderboard-post-score">
                         <div class="profile-post-stat">
                             <span class="swipe-left-arrow">←</span>
@@ -2679,6 +2699,38 @@
             const minutes = Math.floor(seconds / 60);
             const remainingSeconds = Math.floor(seconds % 60);
             return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Helper function to format time
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            let interval = Math.floor(seconds / 31536000);
+            if (interval >= 1) {
+                return interval === 1 ? '1 year ago' : `${interval} years ago`;
+            }
+            
+            interval = Math.floor(seconds / 2592000);
+            if (interval >= 1) {
+                return interval === 1 ? '1 month ago' : `${interval} months ago`;
+            }
+            
+            interval = Math.floor(seconds / 86400);
+            if (interval >= 1) {
+                return interval === 1 ? '1 day ago' : `${interval} days ago`;
+            }
+            
+            interval = Math.floor(seconds / 3600);
+            if (interval >= 1) {
+                return interval === 1 ? '1 hour ago' : `${interval} hours ago`;
+            }
+            
+            interval = Math.floor(seconds / 60);
+            if (interval >= 1) {
+                return interval === 1 ? '1 minute ago' : `${interval} minutes ago`;
+            }
+            
+            return seconds < 10 ? 'just now' : `${seconds} seconds ago`;
         }
         
         // Auth state change listener
@@ -3602,7 +3654,7 @@
                                                 <span class="comment-author" data-user-id="${reply.authorId}" data-username="${reply.author}">${reply.author}</span>
                                                 <span class="comment-time">${replyTimeAgo}</span>
                                             </div>
-                                            <div class="comment-text">${reply.text}</div>
+                                            <div class="comment-text">${linkifyText(reply.text)}</div>
                                         </div>
                                     `;
                                 }).join('')}
@@ -3635,7 +3687,7 @@
                             <span class="comment-author" data-user-id="${comment.authorId}" data-username="${comment.author}">${comment.author}</span>
                             <span class="comment-time">${timeAgo}</span>
                         </div>
-                        <div class="comment-text">${comment.text}</div>
+                        <div class="comment-text">${linkifyText(comment.text)}</div>
                         ${repliesHtml}
                     </div>
                 `;
@@ -3673,7 +3725,7 @@
                     </div>
                 </div>
                 <div class="post-content">
-                    <p>${post.text || ''}</p>
+                    <p>${linkifyText(post.text || '')}</p>
                     ${mediaContent}
                 </div>
                 <div class="comments-section" id="comments-${post.id}">
@@ -4080,38 +4132,6 @@
             }
             
             console.log(`📝 Post added to recently disliked, count: ${recentlyDisliked.size}`);
-        }
-        
-        // Helper function to format time
-        function getTimeAgo(date) {
-            const seconds = Math.floor((new Date() - date) / 1000);
-            
-            let interval = Math.floor(seconds / 31536000);
-            if (interval >= 1) {
-                return interval === 1 ? '1 year ago' : `${interval} years ago`;
-            }
-            
-            interval = Math.floor(seconds / 2592000);
-            if (interval >= 1) {
-                return interval === 1 ? '1 month ago' : `${interval} months ago`;
-            }
-            
-            interval = Math.floor(seconds / 86400);
-            if (interval >= 1) {
-                return interval === 1 ? '1 day ago' : `${interval} days ago`;
-            }
-            
-            interval = Math.floor(seconds / 3600);
-            if (interval >= 1) {
-                return interval === 1 ? '1 hour ago' : `${interval} hours ago`;
-            }
-            
-            interval = Math.floor(seconds / 60);
-            if (interval >= 1) {
-                return interval === 1 ? '1 minute ago' : `${interval} minutes ago`;
-            }
-            
-            return seconds < 10 ? 'just now' : `${seconds} seconds ago`;
         }
         
         // Event delegation for dynamic elements
