@@ -1861,7 +1861,7 @@
             return { cleanText: text, youtubeId: null, youtubeUrl: null };
         }
 
-        // Helper function to make URLs clickable in text (excluding YouTube URLs which become embeds)
+        // Helper function to make URLs clickable in text (excluding YouTube URLs which become embeds) and preserve line breaks
         function linkifyText(text) {
             if (!text) return '';
             
@@ -1871,7 +1871,8 @@
             // URL regex pattern that matches http, https, www, and basic domain patterns
             const urlPattern = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?)/g;
             
-            return textWithoutYoutube.replace(urlPattern, function(match) {
+            // First convert URLs to clickable links
+            let processedText = textWithoutYoutube.replace(urlPattern, function(match) {
                 let url = match;
                 
                 // Add protocol if missing
@@ -1882,6 +1883,11 @@
                 // Create clickable link with security attributes
                 return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">${match}</a>`;
             });
+            
+            // Then convert line breaks to <br> tags
+            processedText = processedText.replace(/\n/g, '<br>');
+            
+            return processedText;
         }
 
         // NEW: Refresh user's disliked posts cache from Firebase
