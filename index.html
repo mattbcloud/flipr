@@ -178,6 +178,82 @@
             cursor: pointer;
         }
 
+        /* NEW: Small inline comment profile pictures - 73% larger than original */
+        .comment-profile-pic {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.03rem;
+            box-shadow: 0 0 3px rgba(57, 255, 20, 0.6);
+            cursor: pointer;
+            transition: transform 0.2s;
+            overflow: hidden;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+
+        .comment-profile-pic:hover {
+            transform: scale(1.1);
+        }
+
+        .comment-profile-pic-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .comment-profile-pic-initial {
+            font-weight: bold;
+            font-size: 1.03rem;
+            cursor: pointer;
+        }
+
+        /* NEW: Even smaller profile pics for replies - 73% larger than original */
+        .reply-profile-pic {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            color: var(--background-color);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.95rem;
+            box-shadow: 0 0 3px rgba(255, 16, 240, 0.6);
+            cursor: pointer;
+            transition: transform 0.2s;
+            overflow: hidden;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+
+        .reply-profile-pic:hover {
+            transform: scale(1.1);
+        }
+
+        .reply-profile-pic-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .reply-profile-pic-initial {
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
         .container {
             max-width: 600px;
             margin: 80px auto 20px;
@@ -1360,6 +1436,21 @@
             /* YouTube embeds on mobile */
             .youtube-embed-container {
                 margin: 0.5rem 0;
+            }
+
+            /* Mobile adjustments for comment profile pics - 73% larger than original */
+            .comment-profile-pic {
+                width: 24px;
+                height: 24px;
+                font-size: 0.95rem;
+                margin-right: 0.3rem;
+            }
+
+            .reply-profile-pic {
+                width: 20px;
+                height: 20px;
+                font-size: 0.86rem;
+                margin-right: 0.3rem;
             }
         }
         
@@ -3684,7 +3775,7 @@
             return true;
         }
         
-        // Render Comments Function
+        // Render Comments Function with small inline profile pictures
         function renderComments(post) {
             if (!post.comments) {
                 return '';
@@ -3738,7 +3829,9 @@
                                     return `
                                         <div class="comment" data-reply-id="${reply.id}">
                                             <div class="comment-header">
-                                                <span class="comment-author" data-user-id="${reply.authorId}" data-username="${reply.author}">${reply.author}</span>
+                                                <span class="comment-author" data-user-id="${reply.authorId}" data-username="${reply.author}">
+                                                    <span class="reply-profile-pic" data-user-id="${reply.authorId}" data-username="${reply.author}"></span>${reply.author}
+                                                </span>
                                                 <span class="comment-time">${replyTimeAgo}</span>
                                             </div>
                                             <div class="comment-text">${linkifyText(reply.text)}</div>
@@ -3771,7 +3864,9 @@
                 return `
                     <div class="comment" data-comment-id="${comment.id}">
                         <div class="comment-header">
-                            <span class="comment-author" data-user-id="${comment.authorId}" data-username="${comment.author}">${comment.author}</span>
+                            <span class="comment-author" data-user-id="${comment.authorId}" data-username="${comment.author}">
+                                <span class="comment-profile-pic" data-user-id="${comment.authorId}" data-username="${comment.author}"></span>${comment.author}
+                            </span>
                             <span class="comment-time">${timeAgo}</span>
                         </div>
                         <div class="comment-text">${linkifyText(comment.text)}</div>
@@ -3846,6 +3941,29 @@
             
             // Fetch and update profile picture for this author
             fetchAuthorProfilePicture(post.authorId, post.author, profilePicElement);
+            
+            // Update profile pictures for all comments and replies after DOM insertion
+            setTimeout(() => {
+                // Update comment profile pictures
+                const commentProfilePics = postCard.querySelectorAll('.comment-profile-pic');
+                commentProfilePics.forEach(pic => {
+                    const userId = pic.getAttribute('data-user-id');
+                    const username = pic.getAttribute('data-username');
+                    if (userId && username) {
+                        fetchCommentProfilePicture(userId, username, pic, 'comment-profile-pic');
+                    }
+                });
+                
+                // Update reply profile pictures
+                const replyProfilePics = postCard.querySelectorAll('.reply-profile-pic');
+                replyProfilePics.forEach(pic => {
+                    const userId = pic.getAttribute('data-user-id');
+                    const username = pic.getAttribute('data-username');
+                    if (userId && username) {
+                        fetchCommentProfilePicture(userId, username, pic, 'reply-profile-pic');
+                    }
+                });
+            }, 100);
             
             // Add swipe functionality - but prevent it over YouTube iframes
             let startX = 0;
@@ -4049,6 +4167,54 @@
             });
             
             return postCard;
+        }
+        
+        // NEW: Function to fetch comment profile pictures
+        function fetchCommentProfilePicture(authorId, authorUsername, profileElement, className) {
+            // Set data attributes immediately for clicking
+            profileElement.setAttribute('data-user-id', authorId);
+            profileElement.setAttribute('data-username', authorUsername);
+            
+            // Check cache first
+            if (profilePictureCache.has(authorId)) {
+                const cachedUser = profilePictureCache.get(authorId);
+                updateProfilePicture(profileElement, {...cachedUser, uid: authorId}, className);
+                return;
+            }
+
+            // If it's the current user, use current user data
+            if (currentUser && authorId === currentUser.uid) {
+                updateProfilePicture(profileElement, currentUser, className);
+                profilePictureCache.set(authorId, currentUser);
+                return;
+            }
+
+            // Fetch from Firebase
+            usersRef.child(authorId).once('value')
+                .then(snapshot => {
+                    const userData = snapshot.val();
+                    const userForDisplay = {
+                        uid: authorId,
+                        username: authorUsername,
+                        profilePicture: userData ? userData.profilePicture : null
+                    };
+                    
+                    // Cache the result
+                    profilePictureCache.set(authorId, userForDisplay);
+                    
+                    // Update the profile picture
+                    updateProfilePicture(profileElement, userForDisplay, className);
+                })
+                .catch(error => {
+                    console.error('Error fetching comment profile picture:', error);
+                    // Fallback to initial
+                    const fallbackUser = { 
+                        uid: authorId, 
+                        username: authorUsername, 
+                        profilePicture: null 
+                    };
+                    updateProfilePicture(profileElement, fallbackUser, className);
+                });
         }
         
         // NEW: Show brief feedback message to user
